@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Monthly Scorecard</title>
+
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .header { display:flex; align-items:center; gap:12px; margin-bottom: 8px; }
+    h2 { margin: 0; }
+
+    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .row + .row { margin-top: 12px; }
+
+    input[type="file"] { padding: 6px; }
+    select, button { padding: 8px; font-size: 14px; }
+    button { cursor:pointer; }
+
+    .status { opacity: 0.75; font-size: 16px; }
+    .hint { margin-top: 8px; opacity: 0.75; font-size: 12px; }
+
+    .tiles { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 6px; }
+    .tiles-top { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+    @media (max-width: 900px) { .tiles-top { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); } }
+
+    .tile { border: 1px solid #ddd; border-radius: 10px; padding: 8px; text-align: center; }
+    .tile.success { background:#e8f5e9; border-color:#a5d6a7; }
+    .tile.warning { background:#fff9c4; border-color:#ffe082; }
+    .tile.danger { background:#ffebee; border-color:#ef9a9a; }
+    .tile .label { font-size: 14px; opacity: 0.75; margin-bottom: 2px; }
+    .tile .value { font-size: 30px; font-weight: 600; }
+/* Keep tile values + the ACW badge centred and neat */
+.value-row{
+  display:flex;
+  align-items:center;              /* FIX: vertical centring */
+  justify-content:space-between;
+  gap:10px;
+}
+
+.value-row .value{
+  flex: 1 1 auto;                  /* keeps the big number stable */
+  text-align:center;               /* centre the main value */
+}
+
+.metric-badge{
+  flex: 0 0 auto;
+  align-self:center;               /* belt + braces */
+  text-align:right;
+  white-space:nowrap;
+  line-height: 1;
+}    .metric-badge { font-size: 12px; font-weight: 700; padding: 6px 8px; border-radius: 8px; border: 1px solid #ddd; line-height: 1.15; text-align: right; white-space: nowrap; }
+    .metric-badge .small { display:block; font-size: 11px; font-weight: 600; opacity: 0.9; }
+    .metric-badge.good { background:#e8f5e9; border-color:#a5d6a7; }
+    .metric-badge.bad { background:#ffebee; border-color:#ef9a9a; }
+
+    .tile .sub { font-size: 14px; opacity: 0.75; margin-top: 6px; }
+    .qa-combined-layout {
+      display:flex;
+      flex-direction:column;
+      align-items:stretch;
+      justify-content:space-between;
+      gap:6px;
+      width:100%;
+      min-height:60px;
+    }
+    .mini-qa-grid {
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      gap:6px;
+      width:100%;
+      margin-top:auto;
+    }
+    .mini-qa-input,
+    .print-qa-value {
+      width:calc(100% / 3 - 4px);
+      min-width:58px;
+      max-width:72px;
+      height:20px;
+      min-height:20px;
+      border:1px solid #ccc;
+      border-radius:6px;
+      padding:1px 2px;
+      text-align:center;
+      font-family: Arial, sans-serif;
+      font-size:13px;
+      line-height:1;
+      background:#fff;
+      color:#111;
+      box-sizing:border-box;
+    }
+    .print-qa-value {
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      white-space:nowrap;
+      overflow:hidden;
+    }
+    .qa-average-display {
+      width:100%;
+      flex:1 1 auto;
+      min-height:20px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:26px;
+      font-weight:700;
+      color:#111;
+      text-align:center;
+      line-height:1.1;
+    }
+    .tile.qa-combined-tile .sub { display:none; }
+    .tile.qa-combined-tile .value-row,
+    .tile.qa-combined-tile .value {
+      width:100%;
+      justify-content:center;
+      text-align:center;
+    }
+    .tile.qa-combined-tile.success .qa-average-display { color:#1b5e20; }
+    .tile.qa-combined-tile.warning .qa-average-display { color:#8a6d00; }
+    .tile.qa-combined-tile.danger .qa-average-display { color:#b71c1c; }
+
+    table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+    th { background: #f5f5f5; position: sticky; top: 0; z-index: 1; }
+
+    .chart-wrapper { margin-top: 18px; padding: 12px; border: 1px solid #ddd; border-radius: 10px; }
+    .chart-title { margin: 0 0 10px 0; font-size: 16px; }
+    .chart-canvas { width: 100%; height: 360px; overflow:hidden; }
+
+    code { background:#f6f6f6; padding:2px 4px; border-radius:4px; }
+
+    body { background: linear-gradient(180deg, #f4f7fb 0%, #ffffff 55%); }
+    .tile, .chart-wrapper { background: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+
+    .feedback-grid { display:grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 12px; margin-top: 16px; }
+    .feedback-card { border: 1px solid #ddd; border-radius: 10px; padding: 12px; background: #ffffff; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    .feedback-card label { display:block; font-size: 16px; opacity: 0.75; margin-bottom: 8px; font-weight: 600; }
+    .feedback-card textarea {
+      width: 100%;
+      min-height: 120px;
+      resize: vertical;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      padding: 10px;
+      font: inherit;
+      box-sizing: border-box;
+      background: #fff;
+    }
+
+    .duties-card { min-height: 200px; }
+    .duties-card .duties-list { display:flex; flex-direction:column; gap:0; }
+    .duties-row {
+      display:grid;
+      grid-template-columns: 1fr 150px;
+      gap:2px;
+      align-items:center;
+      padding:2px 0;
+      border-top:1px solid #d9d9d9;
+    }
+    .duties-row:first-child { border-top:0; padding-top:0; }
+    .duties-q { font-size:14px; line-height:1; }
+    .duties-select {
+      width:100%;
+      padding:2px 2px;
+      border:1px solid #ccc;
+      border-radius:8px;
+      background:#fff;
+      font: inherit;
+      font-size:12px;
+      box-sizing:border-box;
+    }
+    .duties-row.state-coaching { background:#ffebee; }
+    .duties-row.state-meets { background:#e8f5e9; }
+    .duties-empty {
+      min-height: 230px;
+      border: 1px dashed #d0d7de;
+      border-radius: 8px;
+      background: #fafafa;
+    }
+
+    .summary-table-card table { border-collapse: collapse; width: 100%; margin-top: 4px; }
+    .summary-table-card th, .summary-table-card td { border: 1px solid #ccc; padding: 6px; text-align: left; font-size: 13px; }
+    .summary-table-card th { background: #f5f5f5; position: static; }
+    .summary-table-card .empty-note { font-size: 13px; opacity: 0.75; padding-top: 4px; }
+    @media print {
+      body { background: #ffffff !important; margin: 12mm; }
+      .tile, .chart-wrapper { box-shadow: none !important; background: #ffffff !important; }
+
+      /* Keep each chart together - don’t split across pages */
+      .chart-wrapper { break-inside: avoid; page-break-inside: avoid; }
+
+      /* Fit charts to printable width and prevent overflow */
+      .chart-wrapper, .chart-canvas, canvas { max-width: 100% !important; }
+      .chart-canvas { overflow: hidden !important; height: 320px !important; }
+      canvas { width: 100% !important; height: 100% !important; }
+
+      /* Sticky headers cause weird overlaps in print */
+      th { position: static !important; }
+    }
+
+    /* Toggle switch (based on Uiverse.io Shoh2008) */
+    .toggle-switch { display: inline-flex; align-items: center; gap: 8px; }
+    .toggle-switch input[type="checkbox"]{
+      background-image:
+        linear-gradient(rgba(0,0,0,.1), rgba(255,255,255,.1)),
+        linear-gradient(to right, #f66 50%, #6cf 50%);
+      background-size: 100% 100%, 200% 100%;
+      background-position: 0 0, 15px 0;
+      border-radius: 25px;
+      box-shadow:
+        inset 0 1px 4px rgba(0,0,0,.5),
+        inset 0 0 10px rgba(0,0,0,.5),
+        0 0 0 1px rgba(0,0,0,.1),
+        0 -1px 2px 2px rgba(0,0,0,.25),
+        0 2px 2px 2px rgba(255,255,255,.75);
+      cursor: pointer;
+      height: 25px;
+      width: 75px;
+      padding-right: 25px;
+      appearance: none;
+      transition: .25s;
+      border: 0;
+      outline: none;
+    }
+    .toggle-switch input[type="checkbox"]::after{
+      background-color: #eee;
+      background-image: linear-gradient(rgba(255,255,255,.1), rgba(0,0,0,.1));
+      border-radius: 25px;
+      box-shadow:
+        inset 0 1px 1px 1px rgba(255,255,255,1),
+        inset 0 -1px 1px 1px rgba(0,0,0,.25),
+        0 1px 3px 1px rgba(0,0,0,.5),
+        0 0 2px rgba(0,0,0,.25);
+      content: "";
+      display: block;
+      height: 25px;
+      width: 50px;
+    }
+    .toggle-switch input[type="checkbox"]:checked{
+      background-position: 0 0, 35px 0;
+      padding-left: 25px;
+      padding-right: 0;
+    }
+
+/* === Print-equivalent styles for PDF export (mirror of @media print) === */
+#dashboardArea.for-pdf-print {
+  background: #ffffff !important;
+}
+#dashboardArea.for-pdf-print .tile,
+#dashboardArea.for-pdf-print .chart-wrapper,
+#dashboardArea.for-pdf-print .feedback-card {
+  box-shadow: none !important;
+  background: #ffffff !important;
+}
+#dashboardArea.for-pdf-print .feedback-grid {
+  display:grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  margin-top: 16px !important;
+  margin-bottom: 16px !important;
+}
+#dashboardArea.for-pdf-print .feedback-card,
+@media print .feedback-card {
+  width: 100% !important;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+#dashboardArea.for-pdf-print .feedback-card textarea,
+#dashboardArea.for-pdf-print .feedback-card .print-feedback-value {
+  min-height: 120px !important;
+  height: auto !important;
+  resize: none !important;
+  overflow: hidden !important;
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+}
+#dashboardArea.for-pdf-print .feedback-card .print-feedback-value,
+@media print .feedback-card .print-feedback-value {
+  width: 100% !important;
+  min-height: 120px !important;
+  border: 1px solid #ccc !important;
+  border-radius: 8px !important;
+  padding: 10px !important;
+  font: inherit !important;
+  box-sizing: border-box !important;
+  background: #fff !important;
+}
+#dashboardArea.for-pdf-print .duties-card { min-height: 200px; }
+#dashboardArea.for-pdf-print .duties-card .duties-list { display:flex !important; flex-direction:column !important; gap:0 !important; }
+#dashboardArea.for-pdf-print .duties-row { display:grid !important; grid-template-columns: 1fr 150px !important; gap:2px !important; align-items:center !important; padding:2px 0 !important; border-top:1px solid #d9d9d9 !important; }
+#dashboardArea.for-pdf-print .duties-row:first-child { border-top:0 !important; padding-top:0 !important; }
+#dashboardArea.for-pdf-print .duties-q { font-size:14px; line-height:1; }
+#dashboardArea.for-pdf-print .duties-row.state-coaching { background:#ffebee !important; }
+#dashboardArea.for-pdf-print .duties-row.state-meets { background:#e8f5e9 !important; }
+#dashboardArea.for-pdf-print .print-duty-value {
+  width:100% !important;
+  padding:2px 2px !important;
+  border:1px solid #ccc !important;
+  border-radius:8px !important;
+  background:#fff !important;
+  box-sizing:border-box !important;
+  min-height: 18px !important;
+  font-size:12px !important;
+  color:#111 !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  line-height:1.1 !important;
+  white-space:normal !important;
+}
+/* Balanced inner padding for export so right edges (borders/canvases) aren't clipped */
+#dashboardArea.for-pdf-print{
+  padding-left:8px !important;
+  padding-right:8px !important;
+  box-sizing:border-box;
+}
+#dashboardArea.for-pdf-print .tiles,
+#dashboardArea.for-pdf-print .chart-wrapper { overflow: visible !important; }
+#dashboardArea.for-pdf-print canvas { display:block; }
+#dashboardArea.for-pdf-print .chart-wrapper {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+#dashboardArea.for-pdf-print .chart-wrapper,
+#dashboardArea.for-pdf-print .chart-canvas,
+#dashboardArea.for-pdf-print canvas {
+  max-width: 100% !important;
+}
+#dashboardArea.for-pdf-print .chart-canvas {
+  overflow: hidden !important;
+  height: 320px !important;
+}
+#dashboardArea.for-pdf-print canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+#dashboardArea.for-pdf-print *,
+#dashboardArea.for-pdf-print canvas {
+  box-sizing: border-box;
+}
+
+  
+/* Hide header logo in PDF export */
+#dashboardArea.for-pdf-print img[alt="ITS Technology Solutions"]{ display:none !important; }
+
+</style>
+
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
+</head>
+
+<body>
+  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+    <img src="https://armaguard.com.au/wp-content/uploads/2024/10/ITS-Technology-Solutions-1.png"
+         alt="ITS Technology Solutions"
+         style="width: 60px; height: auto; object-fit: contain;" />
+    <div class="header">
+      <h2 id="dashboardTitle">Monthly Scorecard</h2>
+    </div>
+  </div>
+
+  <div class="row">
+    <label><strong>Load Metrics CSV:</strong></label>
+    <input type="file" id="fileInput" accept=".csv,text/csv" />
+    <span id="fileStatus" class="status">Using attached sample data</span>
+</div>
+<script>
+  async function loadKnownCsv(fileName) {
+    const statusEl = document.getElementById('fileStatus');
+    try {
+      const res = await fetch(fileName, { cache: 'no-store' });
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status} - could not load ${fileName}`);
+      }
+      const text = await res.text();
+      loadCsvText(text);
+      if (statusEl) statusEl.textContent = `Loaded default file: ${fileName}`;
+    } catch (err) {
+      console.error('Load default CSV failed:', err);
+      if (statusEl) statusEl.textContent = `Failed to load default file: ${fileName}`;
+      alert(`Failed to load default file.
+${err.message}`);
+    }
+  }
+
+  document.getElementById('meaganbtn').addEventListener('click', () => loadKnownCsv('./Team Meagan Last Month.csv'));
+  document.getElementById('louisebtn').addEventListener('click', () => loadKnownCsv('./Team Louise Last Month.csv'));
+  document.getElementById('andrebtn').addEventListener('click', () => loadKnownCsv('./Team Andre Last Month.csv'));
+</script>
+
+  <div class="row">
+    <label><strong>Agent:</strong></label>
+    <select id="agentSelect"></select>
+
+    <label><strong>Month:</strong></label>
+    <select id="monthSelect"></select>
+
+    <label><strong>Thresholds:</strong></label>
+    <select id="thresholdMode">
+      <option value="default">Default:15+30</option>
+      <option value="strict">Strict:10+25</option>
+      <option value="lenient">Lenient:20+35</option>
+    </select>
+
+    <label><strong>Breaks Baseline:</strong></label>
+    <select id="baselineSelect">
+      <option value="30">30 mins</option>
+      <option value="60" selected>60 mins</option>
+      <option value="45">45 mins</option>
+      <option value="90">90 mins</option>
+    </select>
+
+    <label class="toggle-switch" title="Show data labels on bars">
+      <input type="checkbox" id="showLabels" checked>
+    </label>
+    <span class="status">Data labels</span>
+
+    <button id="refreshBtn" type="button">Refresh</button>
+  
+  <button id="btnExportPdf" type="button" title="Export this dashboard as PDF" style="margin-left:auto;">Export PDF</button>
+</div>
+
+  <div id="dashboardArea">
+  <div id="pdfMeta" class="status" style="display:none; margin:4px 0 12px 0;"></div>
+
+  <div id="topTiles" class="tiles tiles-top"></div>
+
+  <div id="tiles" class="tiles" style="display:none;"></div>
+
+  <div class="feedback-grid">
+    <div class="feedback-card duties-card">
+      <label for="cmcDutiesBox">CMC / Individual Responsibilities</label>
+      <div class="duties-list" id="cmcDutiesList">
+        <div class="duties-row">
+          <div class="duties-q">Guarding Escalations</div><select class="duties-select" aria-label="CMC duty 1 disposition"><option value=""></option>
+            <option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+        <div class="duties-row">
+          <div class="duties-q">CMC Dashboard Tasks</div><select class="duties-select" aria-label="CMC duty 2 disposition"><option value=""></option>
+            <option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+             <div class="duties-row">
+          <div class="duties-q">Expired Tickets</div><select class="duties-select" aria-label="CMC duty 3 disposition"><option value=""></option>
+            <option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+        <div class="duties-row">
+          <div class="duties-q">Failed AA Tickets – Check every 5 minutes</div><select class="duties-select" aria-label="CMC duty 4 disposition"><option value=""></option>
+            <option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+        <div class="duties-row">
+          <div class="duties-q">Allocated Partial – Check every 5 minutes</div><select class="duties-select" aria-label="CMC duty 5 disposition"><option value=""></option>
+            <option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+        <div class="duties-row">
+          <div class="duties-q">Access Issues i.e Customer Hold, Attendance Error</div><select class="duties-select" aria-label="CMC duty 6 disposition"><option value=""></option>
+            <option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+        <div class="duties-row">
+          <div class="duties-q">Quotes (17:00-00:00)</div><select class="duties-select" aria-label="CMC duty 7 disposition"><option value=""></option>
+            <option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+                  <div class="duties-row">
+          <div class="duties-q">Actions tasks and emails in a timely manner</div><select class="duties-select" aria-label="CMC duty 8 disposition"><option value=""></option>
+            <option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+            <div class="duties-row">
+          <div class="duties-q">Professional Email Communication</div><select class="duties-select" aria-label="CMC duty 9 disposition"><option value=""></option>
+            <option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+            <div class="duties-row">
+          <div class="duties-q">Responds well to feedback</div><select class="duties-select" aria-label="CMC duty 10 disposition"><option value=""></option>
+            <option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+            <div class="duties-row">
+          <div class="duties-q">Adherence to Schedule</div><select class="duties-select" aria-label="CMC duty 11 disposition"><option value="">
+  </option><option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+   <div class="duties-row">
+          <div class="duties-q">Communicates absences in line with expectations</div><select class="duties-select" aria-label="CMC duty 12 disposition"><option value=""></option>
+            <option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+      </div>
+    </div>
+    <div class="feedback-card duties-card">
+      <label>SPT Duties</label>
+      <div class="duties-list" id="sptDutiesList">
+        <div class="duties-row"><div class="duties-q">Has a good handle on techs in zones</div><select class="duties-select" aria-label="SPT duty 1 disposition"><option value=""></option><option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+                <div class="duties-row"><div class="duties-q">Escalates to RFM's, Field Admin or CSD TL's when required</div><select class="duties-select" aria-label="SPT duty 8 disposition"><option value=""></option><option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+        <div class="duties-row"><div class="duties-q">Technician Interaction (communicating with tech, rearranging tickets, priorities, etc.)</div><select class="duties-select" aria-label="SPT duty 1 disposition"><option value=""></option><option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+                <div class="duties-row"><div class="duties-q">Dashboard tasks actioned on time (within one hour)</div><select class="duties-select" aria-label="SPT duty 5 disposition"><option value=""></option><option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+        <div class="duties-row"><div class="duties-q">Tech Utilisation Sheet</div><select class="duties-select" aria-label="SPT duty 1 disposition"><option value=""></option><option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+        <div class="duties-row"><div class="duties-q">Field Registrar Sheet</div><select class="duties-select" aria-label="SPT duty 1 disposition"><option value=""></option><option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+        <div class="duties-row"><div class="duties-q">Field Tech Changes Weekend and Public Hols Sheet</div><select class="duties-select" aria-label="SPT duty 1 disposition"><option value=""></option><option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+        <div class="duties-row"><div class="duties-q">Shift Handover</div><select class="duties-select" aria-label="SPT duty 1 disposition"><option value=""></option><option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+        <div class="duties-row"><div class="duties-q">Tickets allocation (AA and manual as required)</div><select class="duties-select" aria-label="SPT duty 2 disposition"><option value=""></option><option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+        <div class="duties-row"><div class="duties-q">SP Escalations emails actioned on time and filed properly</div><select class="duties-select" aria-label="SPT duty 3 disposition"><option value=""></option><option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+        <div class="duties-row"><div class="duties-q">SPT Weekly Handover</div><select class="duties-select" aria-label="SPT duty 7 disposition"><option value=""></option><option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+        <div class="duties-row"><div class="duties-q">General interaction and team communication  (other BUs, CMC, SPTs)</div><select class="duties-select" aria-label="SPT duty 9 disposition"><option value=""></option><option>Needs Improvement</option><option>Meets Expectations</option><option>N/A</option></select></div>
+      </div>
+    </div>
+    <div class="feedback-card">
+      <label for="overallFeedback">Overall Feedback</label>
+      <textarea id="overallFeedback" placeholder="Enter overall feedback here"></textarea>
+    </div>
+    <div class="feedback-card">
+      <label for="qaFeedback">QA Feedback</label>
+      <textarea id="qaFeedback" placeholder="Enter QA feedback here"></textarea>
+    </div>
+    <div class="feedback-card summary-table-card">
+      <label>Missed Calls by Date</label>
+      <div id="missedDatesCard"></div>
+    </div>
+    <div class="feedback-card summary-table-card">
+      <label>Personal Use Over 15 Minutes</label>
+      <div id="personalExceededCard"></div>
+    </div>
+  </div>
+
+  <div id="chartsContainer"></div>
+</div><!-- end #dashboardArea -->
+
+<script>
+  let SHOW_DATALABELS = true;
+
+  const QA_CONFIG = {
+    miniInputCount: 3,
+    inputMaxLength: 6,          // e.g. 99.99 or 100.00
+    inputDecimalPlaces: 2,
+    averageDecimalPlaces: 2,
+    inputDisplaySuffix: "%",
+    averageDisplaySuffix: "%",
+    greenMin: 90,
+    yellowMin: 85
+  };
+
+  document.getElementById("showLabels").addEventListener("change", (e) => {
+    SHOW_DATALABELS = e.target.checked;
+    Object.values(charts).forEach(ch => { try { ch.update(); } catch (e) {} });
+  });
+
+  // Embedded sample data (from the file you attached)
+  const EMBEDDED_SAMPLE_ROWS = [{"Agent": "Betty.Herman@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 18990, "Contacts missed": 2.0, "Nonproductive time": 1665.0, "Online time": 22499, "Break (30min) time": null, "Break (15min) time": null, "Escalations time": null, "Emails time": null, "Tasks time": null, "After Call Work time": 1665.0, "Personal time": null, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": 81.0, "Contacts handled": 24.0, "Contacts handled incoming": 14.0, "Contacts handled outbound": 10.0}, {"Agent": "Biljana.Custovic@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 28783, "Contacts missed": 1.0, "Nonproductive time": null, "Online time": 28783, "Break (30min) time": null, "Break (15min) time": null, "Escalations time": null, "Emails time": null, "Tasks time": null, "After Call Work time": null, "Personal time": null, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": null, "Contacts handled": null, "Contacts handled incoming": null, "Contacts handled outbound": null}, {"Agent": "Charlotte.Cullum@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 20906, "Contacts missed": 1.0, "Nonproductive time": 6023.0, "Online time": 30356, "Break (30min) time": 1848.0, "Break (15min) time": 1837.0, "Escalations time": null, "Emails time": 113.0, "Tasks time": 89.0, "After Call Work time": 331.0, "Personal time": 1802.0, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": 168.0, "Contacts handled": 19.0, "Contacts handled incoming": 12.0, "Contacts handled outbound": 7.0}, {"Agent": "Claudia.Reddan@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 18863, "Contacts missed": 1.0, "Nonproductive time": 4689.0, "Online time": 29160, "Break (30min) time": 3745.0, "Break (15min) time": null, "Escalations time": null, "Emails time": null, "Tasks time": 325.0, "After Call Work time": 618.0, "Personal time": null, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": 253.0, "Contacts handled": 23.0, "Contacts handled incoming": 15.0, "Contacts handled outbound": 8.0}, {"Agent": "Hardik.Mandaloju@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 20961, "Contacts missed": null, "Nonproductive time": 7007.0, "Online time": 29750, "Break (30min) time": 3589.0, "Break (15min) time": null, "Escalations time": null, "Emails time": null, "Tasks time": null, "After Call Work time": 3418.0, "Personal time": null, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": 86.0, "Contacts handled": 16.0, "Contacts handled incoming": 10.0, "Contacts handled outbound": 6.0}, {"Agent": "Jill.Nunan@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 20500, "Contacts missed": 1.0, "Nonproductive time": 4808.0, "Online time": 30488, "Break (30min) time": null, "Break (15min) time": 1965.0, "Escalations time": null, "Emails time": null, "Tasks time": 780.0, "After Call Work time": 2063.0, "Personal time": null, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": 150.0, "Contacts handled": 25.0, "Contacts handled incoming": 11.0, "Contacts handled outbound": 14.0}, {"Agent": "Lauren.Godbier@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 13214, "Contacts missed": 1.0, "Nonproductive time": 9350.0, "Online time": 24944, "Break (30min) time": 3840.0, "Break (15min) time": 1376.0, "Escalations time": null, "Emails time": 4133.0, "Tasks time": null, "After Call Work time": null, "Personal time": null, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": 176.0, "Contacts handled": 13.0, "Contacts handled incoming": 8.0, "Contacts handled outbound": 5.0}, {"Agent": "Lisa.Welsh@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 17008, "Contacts missed": 2.0, "Nonproductive time": 8805.0, "Online time": 29793, "Break (30min) time": null, "Break (15min) time": 1000.0, "Escalations time": null, "Emails time": null, "Tasks time": null, "After Call Work time": 3992.0, "Personal time": 579.0, "Training time": null, "Meeting time": 556.0, "Break (45min) time": 2676.0, "Average handle time": 113.0, "Contacts handled": 32.0, "Contacts handled incoming": 11.0, "Contacts handled outbound": 21.0}, {"Agent": "Maria.Felias@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 21591, "Contacts missed": 1.0, "Nonproductive time": 3663.0, "Online time": 28911, "Break (30min) time": 3524.0, "Break (15min) time": null, "Escalations time": null, "Emails time": null, "Tasks time": null, "After Call Work time": null, "Personal time": 138.0, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": 119.0, "Contacts handled": 25.0, "Contacts handled incoming": 11.0, "Contacts handled outbound": 14.0}, {"Agent": "Maridel.Sarmiento@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 7826, "Contacts missed": null, "Nonproductive time": 16270.0, "Online time": 28734, "Break (30min) time": 1766.0, "Break (15min) time": 1743.0, "Escalations time": null, "Emails time": null, "Tasks time": null, "After Call Work time": 12760.0, "Personal time": null, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": 273.0, "Contacts handled": 17.0, "Contacts handled incoming": 13.0, "Contacts handled outbound": 4.0}, {"Agent": "Mina.Karayianis@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 14551, "Contacts missed": 1.0, "Nonproductive time": 6367.0, "Online time": 28379, "Break (30min) time": 1214.0, "Break (15min) time": 483.0, "Escalations time": null, "Emails time": null, "Tasks time": null, "After Call Work time": 4668.0, "Personal time": null, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": 252.0, "Contacts handled": 25.0, "Contacts handled incoming": 11.0, "Contacts handled outbound": 14.0}, {"Agent": "Mohammad.Mehdi@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 17326, "Contacts missed": 1.0, "Nonproductive time": 13972.0, "Online time": 35408, "Break (30min) time": 1895.0, "Break (15min) time": 1827.0, "Escalations time": null, "Emails time": 1211.0, "Tasks time": null, "After Call Work time": 9038.0, "Personal time": null, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": 167.0, "Contacts handled": 26.0, "Contacts handled incoming": 13.0, "Contacts handled outbound": 13.0}, {"Agent": "Muriel.Gabriel@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 20562, "Contacts missed": null, "Nonproductive time": 4851.0, "Online time": 28438, "Break (30min) time": 1854.0, "Break (15min) time": 1846.0, "Escalations time": null, "Emails time": null, "Tasks time": null, "After Call Work time": null, "Personal time": 1149.0, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": 113.0, "Contacts handled": 21.0, "Contacts handled incoming": 8.0, "Contacts handled outbound": 13.0}, {"Agent": "Rini.Tutehira@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 10812, "Contacts missed": null, "Nonproductive time": 12930.0, "Online time": 28755, "Break (30min) time": 2086.0, "Break (15min) time": 1011.0, "Escalations time": null, "Emails time": null, "Tasks time": 397.0, "After Call Work time": 9434.0, "Personal time": null, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": 204.0, "Contacts handled": 26.0, "Contacts handled incoming": 11.0, "Contacts handled outbound": 15.0}, {"Agent": "Shruti.Rajendran@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 20475, "Contacts missed": 1.0, "Nonproductive time": 5644.0, "Online time": 30589, "Break (30min) time": 3444.0, "Break (15min) time": null, "Escalations time": null, "Emails time": null, "Tasks time": null, "After Call Work time": 2199.0, "Personal time": null, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": 95.0, "Contacts handled": 42.0, "Contacts handled incoming": 16.0, "Contacts handled outbound": 26.0}, {"Agent": "Timothy.Smith@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 15249, "Contacts missed": null, "Nonproductive time": 10775.0, "Online time": 29143, "Break (30min) time": 1905.0, "Break (15min) time": 1720.0, "Escalations time": null, "Emails time": null, "Tasks time": null, "After Call Work time": 7150.0, "Personal time": null, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": 201.0, "Contacts handled": 18.0, "Contacts handled incoming": 5.0, "Contacts handled outbound": 13.0}, {"Agent": "Tony.Phillips@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 12113, "Contacts missed": null, "Nonproductive time": 7474.0, "Online time": 23677, "Break (30min) time": 1823.0, "Break (15min) time": null, "Escalations time": null, "Emails time": null, "Tasks time": null, "After Call Work time": 5650.0, "Personal time": null, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": 135.0, "Contacts handled": 30.0, "Contacts handled incoming": 15.0, "Contacts handled outbound": 15.0}, {"Agent": "Uday.Achalla@linfoxag.com", "StartInterval": "2026-01-02T00:00:00.000+11:00", "EndInterval": "2026-01-03T00:00:00.000+11:00", "Agent idle time": 20874, "Contacts missed": 1.0, "Nonproductive time": 8090.0, "Online time": 30750, "Break (30min) time": 1836.0, "Break (15min) time": 1925.0, "Escalations time": null, "Emails time": null, "Tasks time": null, "After Call Work time": 4328.0, "Personal time": null, "Training time": null, "Meeting time": null, "Break (45min) time": null, "Average handle time": 166.0, "Contacts handled": 10.0, "Contacts handled incoming": 7.0, "Contacts handled outbound": 3.0}];
+  const SAMPLE_AGENT_POOL = [
+    "Zendaya",
+    "Timothée Chalamet",
+    "Florence Pugh",
+    "Margot Robbie",
+    "Ryan Gosling"
+  ];
+  EMBEDDED_SAMPLE_ROWS.forEach((row, idx) => { row.Agent = SAMPLE_AGENT_POOL[idx % SAMPLE_AGENT_POOL.length]; });
+  let rawRows = EMBEDDED_SAMPLE_ROWS.slice();
+
+  const charts = {};
+
+  // Draw "!" markers on break mix chart when a segment exceeds its slot.
+  // For Break 15, we treat it as a combined allowance (2 x 15 = 30), so no marker until it exceeds 30.
+  const exceedMarkerPlugin = {
+    id: "exceedMarkerPlugin",
+    afterDatasetsDraw(chart) {
+      if (!chart || !chart.canvas || chart.canvas.id !== "chart_breakMix") return;
+
+      const ctx = chart.ctx;
+      const labels = chart.data?.labels || [];
+      const ds = chart.data?.datasets || [];
+
+      const barDsIdx = ds
+        .map((d, i) => ({ d, i }))
+        .filter(x => (x.d.type || chart.config.type) === "bar" && !/threshold|baseline|average/i.test(String(x.d.label || "")))
+        .map(x => x.i);
+
+      const thresholdByLabel = (label) => {
+        const s = String(label || "").toLowerCase();
+        const { t15, t30 } = getThresholds();
+        if (s.includes("break 15")) return t30; // 2 x 15 combined = 30
+        if (s.includes("break 30")) return t30;
+        if (s.includes("break 45")) return 45;
+        return null;
+      };
+
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "bold 14px Arial";
+      ctx.fillStyle = "black";
+
+      barDsIdx.forEach(di => {
+        const dataset = ds[di];
+        const thr = thresholdByLabel(dataset.label);
+        if (thr === null) return;
+
+        const meta = chart.getDatasetMeta(di);
+        (meta.data || []).forEach((el, idx) => {
+          const v = Number(dataset.data[idx]);
+          if (!isFinite(v)) return;
+          if (v <= thr) return;
+          const pos = el.tooltipPosition();
+          ctx.fillText("!", pos.x, pos.y);
+        });
+      });
+
+      const totalThr = Number(document.getElementById("baselineSelect")?.value) || 60;
+      for (let idx = 0; idx < labels.length; idx++) {
+        let total = 0;
+        barDsIdx.forEach(di => {
+          const v = Number(ds[di].data[idx]);
+          if (isFinite(v)) total += v;
+        });
+        if (total <= totalThr) continue;
+
+        let topEl = null;
+        for (let j = barDsIdx.length - 1; j >= 0; j--) {
+          const di = barDsIdx[j];
+          const meta = chart.getDatasetMeta(di);
+          const el = meta.data && meta.data[idx] ? meta.data[idx] : null;
+          if (el) { topEl = el; break; }
+        }
+        if (!topEl) continue;
+        const p = topEl.tooltipPosition();
+        ctx.fillText("❗", p.x, p.y - 12);
+      }
+
+      ctx.restore();
+    }
+  };
+
+  if (typeof Chart !== "undefined" && Chart.register) {
+    Chart.register(exceedMarkerPlugin);
+    Chart.register(ChartDataLabels);
+  }
+
+  const monthOrder = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const monthFullMap = {Jan:"January",Feb:"February",Mar:"March",Apr:"April",May:"May",Jun:"June",Jul:"July",Aug:"August",Sep:"September",Oct:"October",Nov:"November",Dec:"December"};
+
+  const FIELD_AGENT = "Agent";
+  const FIELD_START = "StartInterval";
+  const FIELD_BREAK15 = "Break (15min) time";
+  const FIELD_BREAK30 = "Break (30min) time";
+  const FIELD_BREAK45 = "Break (45min) time";
+
+  const FIELD_NPT = "Nonproductive time";
+  const FIELD_ONLINE = "Online time";
+  
+  const FIELD_IDLE = "Agent idle time";
+const FIELD_CONTACTS_IN = "Contacts handled incoming";
+  const FIELD_CONTACTS_OUT = "Contacts handled outbound";
+
+  const FIELD_ACW = "After Call Work time";
+  const FIELD_CONTACTS_MISSED = "Agent non-response without customer abandons";
+
+  
+  const FIELD_AHT = "Average handle time";
+// Additional 6 graphs (minutes/day)
+  const FIELD_ESC = "Escalations time";
+  const FIELD_EMAILS = "Emails time";
+  const FIELD_TASKS = "Tasks time";
+  const FIELD_PERSONAL = "Personal time";
+  const FIELD_TRAINING = "Training time";
+  const FIELD_MEETING = "Meeting time";
+
+  function formatLocalDateKey(d) {
+    if (!d) return "";
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function monthAbbrevFromDate(d) {
+    if (!d) return "";
+    return monthOrder[d.getMonth()] || "";
+  }
+
+  function formatAgentDisplayName(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    const local = raw.includes("@") ? raw.split("@")[0] : raw;
+    const cleaned = local.replace(/[._]+/g, " ").replace(/\s+/g, " ").trim();
+    if (!cleaned) return raw;
+    return cleaned.split(" ").map(part => part ? part.charAt(0).toUpperCase() + part.slice(1).toLowerCase() : "").join(" ");
+  }
+
+  function parseIsoDate(s) {
+    if (!s) return null;
+    const d = new Date(String(s));
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function secToMin(v) {
+    const n = Number(v);
+    if (!isFinite(n)) return 0;
+    return n / 60;
+  }
+
+  function getThresholds() {
+    const mode = document.getElementById("thresholdMode").value;
+    if (mode === "strict") return { t15: 10, t30: 25 };
+    if (mode === "lenient") return { t15: 20, t30: 35 };
+    return { t15: 15, t30: 30 };
+  }
+
+  function normaliseRows(rows) {
+    return rows.map(r0 => {
+      const r = { ...r0 };
+      const d = parseIsoDate(r[FIELD_START]);
+      r.__date = d ? formatLocalDateKey(d) : "";
+      r.__month = d ? monthAbbrevFromDate(d) : "";
+      r.__year = d ? String(d.getFullYear()) : "";
+
+      r.__break15Min = secToMin(r[FIELD_BREAK15]);
+      r.__break30Min = secToMin(r[FIELD_BREAK30]);
+      r.__break45Min = secToMin(r[FIELD_BREAK45]);
+      r.__totalBreakMin = r.__break15Min + r.__break30Min + r.__break45Min;
+
+      r.__nptMin = secToMin(r[FIELD_NPT]);
+      r.__onlineMin = secToMin(r[FIELD_ONLINE]);
+      r.__contactsIn = Number(r[FIELD_CONTACTS_IN]) || 0;
+      r.__contactsOut = Number(r[FIELD_CONTACTS_OUT]) || 0;
+      r.__acwMin = secToMin(r[FIELD_ACW]);
+      
+      r.__idleMin = secToMin(r[FIELD_IDLE]);
+      r.__onlineMin = secToMin(r[FIELD_ONLINE]);
+r.__contactsMissed = Number(r[FIELD_CONTACTS_MISSED]) || 0;
+
+      
+      r.__ahtSec = Number(r[FIELD_AHT]) || 0;
+// additional 6
+      r.__escMin = secToMin(r[FIELD_ESC]);
+      r.__emailsMin = secToMin(r[FIELD_EMAILS]);
+      r.__tasksMin = secToMin(r[FIELD_TASKS]);
+      r.__personalMin = secToMin(r[FIELD_PERSONAL]);
+      r.__trainingMin = secToMin(r[FIELD_TRAINING]);
+      r.__meetingMin = secToMin(r[FIELD_MEETING]);
+
+      return r;
+    });
+  }
+
+  function uniqueSorted(values) {
+    return Array.from(new Set(values.filter(v => v !== null && v !== undefined && String(v).trim() !== "")))
+      .map(v => String(v))
+      .sort((a,b)=>a.localeCompare(b));
+  }
+
+  function rebuildAgentDropdown() {
+    const sel = document.getElementById("agentSelect");
+    const agents = uniqueSorted(rawRows.map(r => r[FIELD_AGENT]));
+    sel.innerHTML = "";
+    const optAll = document.createElement("option");
+    optAll.value = "";
+    optAll.textContent = "All agents";
+    sel.appendChild(optAll);
+    agents.forEach(a => {
+      const opt = document.createElement("option");
+      opt.value = a;
+      opt.textContent = formatAgentDisplayName(a);
+      sel.appendChild(opt);
+    });
+  }
+
+  function rebuildMonthDropdown(derivedAll) {
+    const sel = document.getElementById("monthSelect");
+    const monthsSet = new Set((derivedAll || []).map(r => r.__month).filter(Boolean));
+    const months = monthOrder.filter(m => monthsSet.has(m));
+    const current = sel.value;
+
+    sel.innerHTML = "";
+    const optAll = document.createElement("option");
+    optAll.value = "";
+    optAll.textContent = "All months";
+    sel.appendChild(optAll);
+
+    months.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      sel.appendChild(opt);
+    });
+
+    const stillExists = Array.from(sel.options).some(o => o.value === current);
+    sel.value = stillExists ? current : "";
+  }
+
+  function fmtMin(m) {
+    if (m === null || m === undefined) return "—";
+    const n = Number(m);
+    if (!isFinite(n)) return "—";
+    return n.toFixed(1);
+  }
+
+  
+
+  function formatMMSS(seconds) {
+    const s = Number(seconds);
+    if (!isFinite(s) || s < 0) return "—";
+    const mm = Math.floor(s / 60);
+    const ss = Math.round(s % 60);
+    return `${String(mm).padStart(2,"0")}:${String(ss).padStart(2,"0")}`;
+  }
+function renderTiles(derived) {
+    const topTiles = document.getElementById("topTiles");
+    const tiles = document.getElementById("tiles");
+    if (topTiles) topTiles.innerHTML = "";
+    if (tiles) tiles.innerHTML = "";
+    if (!derived.length) return;
+
+    const { t15, t30 } = getThresholds();
+    const baseline = Number(document.getElementById("baselineSelect")?.value) || 60;
+
+    const sum = (arr) => arr.reduce((a,b)=>a+b,0);
+
+    // --- Top tiles (as per screenshot) ---
+    const totalNptMin = sum(derived.map(r => Number(r.__nptMin) || 0));
+    const totalOnlineMin = sum(derived.map(r => Number(r.__onlineMin) || 0));
+    const nptPctOfOnline = totalOnlineMin > 0 ? ((totalNptMin / totalOnlineMin) * 100) : null;
+    const availabilityPctFromNpt = nptPctOfOnline === null ? null : Math.max(0, 100 - nptPctOfOnline);
+
+    const totalAcwMin = sum(derived.map(r => Number(r.__acwMin) || 0));
+const avgAcwMinPerDay = derived.length > 0 ? (totalAcwMin / derived.length) : null;
+
+    const contactsInTotal = sum(derived.map(r => Number(r.__contactsIn) || 0));
+    const contactsOutTotal = sum(derived.map(r => Number(r.__contactsOut) || 0));
+
+    
+
+    
+
+    const totalContactsAll = (Number(contactsInTotal) || 0) + (Number(contactsOutTotal) || 0);
+    const acwPerContact = totalContactsAll > 0 ? (totalAcwMin / totalContactsAll) : null;
+const contactsMissedTotal = sum(derived.map(r => Number(r.__contactsMissed) || 0));
+
+    const totalIdleMin = sum(derived.map(r => Number(r.__idleMin) || 0));
+    const totalOnlineMin2 = sum(derived.map(r => Number(r.__onlineMin) || 0));
+
+    const answerRatePct2 = (contactsInTotal + contactsMissedTotal) > 0
+      ? (contactsInTotal / (contactsInTotal + contactsMissedTotal) * 100)
+      : null;
+
+    const activeUtilPct = totalOnlineMin2 > 0
+      ? ((totalOnlineMin2 - totalIdleMin) / totalOnlineMin2 * 100)
+      : null;
+
+    const totalBreakMin2 = sum(derived.map(r => Number(r.__totalBreakMin) || 0));
+
+    const breaksPct2 = totalOnlineMin2 > 0
+      ? ((totalBreakMin2 / totalOnlineMin2) * 100)
+      : null;
+
+    // Call-weighted AHT (weighted by Contacts handled incoming, else weight=1)
+    let ahtWeightedSum = 0;
+    let ahtWeight = 0;
+    derived.forEach(r => {
+      const w = (Number(r.__contactsIn) || 0) > 0 ? (Number(r.__contactsIn) || 0) : 1;
+      const aht = Number(r.__ahtSec) || 0;
+      ahtWeightedSum += aht * w;
+      ahtWeight += w;
+    });
+    const ahtAvgSec = ahtWeight > 0 ? (ahtWeightedSum / ahtWeight) : null;
+
+const topTilesData = [
+      {
+        label: "Answer Rate",
+        value: (answerRatePct2 === null ? "—" : answerRatePct2.toFixed(2) + "%"),
+        sub: `Missed: ${Math.round(contactsMissedTotal)} of ${Math.round(contactsInTotal + contactsMissedTotal)}`,
+        state: (answerRatePct2 === null ? "" : (answerRatePct2 >= 95 ? "success" : (answerRatePct2 >= 90 ? "warning" : "danger")))
+      },
+      {
+        label: "AHT",
+        value: (ahtAvgSec === null ? "—" : formatMMSS(ahtAvgSec)),
+        sub: "Call-weighted (by handled incoming)",
+        state: (ahtAvgSec === null ? "" : (ahtAvgSec < 180 ? "success" : (ahtAvgSec <= 300 ? "warning" : "danger")))
+      },
+      {
+        label: "Availability",
+        value: (availabilityPctFromNpt === null ? "—" : availabilityPctFromNpt.toFixed(1) + "%"),
+        sub: "Time spent in Available",
+        state: (availabilityPctFromNpt === null ? "" : (availabilityPctFromNpt > 50 ? "success" : (availabilityPctFromNpt >= 40 ? "warning" : "danger")))
+      },
+      {
+        label: "Contacts Handled",
+        value: `In: ${Math.round(contactsInTotal)} | Out: ${Math.round(contactsOutTotal)}`,
+        sub: "Total for period"
+      },      {
+        label: "QA Average",
+        value: `
+          <div class="qa-combined-layout">
+            <div class="qa-average-display" id="qaAverage" aria-label="Average QA score"></div>
+            <div class="mini-qa-grid">
+              <input type="text" class="mini-qa-input" id="qaInput1" inputmode="decimal" maxlength="6" aria-label="QA input 1" placeholder="%">
+              <input type="text" class="mini-qa-input" id="qaInput2" inputmode="decimal" maxlength="6" aria-label="QA input 2" placeholder="%">
+              <input type="text" class="mini-qa-input" id="qaInput3" inputmode="decimal" maxlength="6" aria-label="QA input 3" placeholder="%">
+            </div>
+          </div>`,
+        sub: "",
+        className: "qa-combined-tile"
+      }
+    ];
+
+    topTilesData.forEach(t => {
+      const div = document.createElement("div");
+      div.className = "tile";
+      if (t.className) div.classList.add(t.className);
+      if (t.state) div.classList.add(t.state);
+      div.innerHTML = `<div class="label">${t.label}</div>`
+        + `<div class="value-row"><div class="value">${t.value}</div>${t.rightHtml ? t.rightHtml : ""}</div>`
+        + `<div class="sub">${t.sub}</div>`;
+      if (topTiles) topTiles.appendChild(div);
+    });
+
+    wireQaInputs();
+  }
+
+  function parseQaNumber(value) {
+    const cleaned = String(value ?? "").trim().replace(/,/g, ".").replace(/%/g, "");
+    if (!cleaned) return null;
+    const n = Number(cleaned);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function sanitiseQaInputValue(value) {
+    let cleaned = String(value ?? "").replace(/,/g, ".").replace(/[^0-9.%]/g, "").replace(/%/g, "");
+    const firstDot = cleaned.indexOf('.');
+    if (firstDot !== -1) {
+      cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, "");
+    }
+    const parts = cleaned.split('.');
+    parts[0] = (parts[0] || '').slice(0, 3);
+    if (parts.length > 1) parts[1] = (parts[1] || '').slice(0, QA_CONFIG.inputDecimalPlaces);
+    cleaned = parts.length > 1 ? `${parts[0]}.${parts[1]}` : parts[0];
+    return cleaned.slice(0, QA_CONFIG.inputMaxLength);
+  }
+
+  function applyQaAverageState(avg) {
+    const tile = document.querySelector('.tile.qa-combined-tile');
+    if (!tile) return;
+    tile.classList.remove('success', 'warning', 'danger');
+    if (avg === null || !Number.isFinite(avg)) return;
+    if (avg >= QA_CONFIG.greenMin) tile.classList.add('success');
+    else if (avg >= QA_CONFIG.yellowMin) tile.classList.add('warning');
+    else tile.classList.add('danger');
+  }
+
+  function updateQaAverage() {
+    const inputs = Array.from({ length: QA_CONFIG.miniInputCount }, (_, idx) => `qaInput${idx + 1}`)
+      .map(id => document.getElementById(id))
+      .filter(Boolean);
+    const out = document.getElementById("qaAverage");
+    if (!out) return;
+    const nums = inputs.map(el => parseQaNumber(el.value)).filter(v => v !== null);
+    const avg = nums.length ? (nums.reduce((a,b) => a + b, 0) / nums.length) : null;
+    out.textContent = avg === null ? "" : (avg.toFixed(QA_CONFIG.averageDecimalPlaces) + QA_CONFIG.averageDisplaySuffix);
+    applyQaAverageState(avg);
+  }
+
+  function wireQaInputs() {
+    Array.from({ length: QA_CONFIG.miniInputCount }, (_, idx) => `qaInput${idx + 1}`).forEach(id => {
+      const el = document.getElementById(id);
+      if (!el || el.dataset.qaBound === "1") return;
+      el.dataset.qaBound = "1";
+      el.addEventListener("input", () => {
+        const cleaned = sanitiseQaInputValue(el.value);
+        if (el.value !== cleaned) el.value = cleaned;
+        updateQaAverage();
+      });
+      el.addEventListener("blur", () => {
+        const n = parseQaNumber(el.value);
+        el.value = n === null ? "" : (n.toFixed(QA_CONFIG.inputDecimalPlaces) + QA_CONFIG.inputDisplaySuffix);
+        updateQaAverage();
+      });
+    });
+    updateQaAverage();
+  }
+
+  function getDutyStateClass(value) {
+    const v = String(value || "").trim().toLowerCase();
+    if (v === "needs improvement") return "state-coaching";
+    if (v === "meets expectations") return "state-meets";
+    return "";
+  }
+
+  function applyDutyRowHighlights() {
+    document.querySelectorAll('.duties-row').forEach(row => {
+      const select = row.querySelector('.duties-select');
+      row.classList.remove('state-coaching', 'state-meets', 'state-exceeds');
+      if (!select) return;
+      const cls = getDutyStateClass(select.value);
+      if (cls) row.classList.add(cls);
+    });
+  }
+
+  function wireDutySelects() {
+    document.querySelectorAll('.duties-select').forEach(select => {
+      if (select.dataset.dutyBound === "1") return;
+      select.dataset.dutyBound = "1";
+      select.addEventListener('change', applyDutyRowHighlights);
+    });
+    applyDutyRowHighlights();
+  }
+
+  function renderTable(derived) {
+    const head = document.querySelector("#dataTable thead");
+    const body = document.querySelector("#dataTable tbody");
+    if (!head || !body) return;
+    head.innerHTML = "";
+    body.innerHTML = "";
+
+    if (!derived.length) {
+      head.innerHTML = "<tr><th>No data</th></tr>";
+      return;
+    }
+
+    const cols = [
+      FIELD_AGENT, "__date", "__month",
+      "__break15Min", "__break30Min", "__break45Min", "__totalBreakMin",
+      "__contactsMissed", "__acwMin",
+      "__escMin", "__emailsMin", "__tasksMin", "__personalMin", "__trainingMin", "__meetingMin"
+    ];
+
+    head.innerHTML = "<tr>" + cols.map(c => {
+      const title = c.startsWith("__") ? c.replace("__","").replace("Min"," (mins)") : c;
+      return `<th>${title}</th>`;
+    }).join("") + "</tr>";
+
+    derived
+      .slice()
+      .sort((a,b)=> String(a.__date).localeCompare(String(b.__date)))
+      .forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = cols.map(c => {
+          let v = r[c];
+          if (String(c).includes("Min") || c === "__totalBreakMin") v = fmtMin(v);
+          return `<td>${v ?? ""}</td>`;
+        }).join("");
+        body.appendChild(tr);
+      });
+  }
+
+  function destroyCharts() {
+    Object.keys(charts).forEach(k => {
+      try { charts[k].destroy(); } catch (e) {}
+      delete charts[k];
+    });
+  }
+
+  function baseChartOptions() {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: true,
+      plugins: {
+        legend: { display: true },
+        datalabels: {
+          anchor: "center",
+          align: "center",
+          clamp: true,
+          clip: true,
+          formatter: (value, ctx) => {
+            if (!SHOW_DATALABELS) return "";
+            const label = String(ctx.dataset?.label || "").toLowerCase();
+            if (label.includes("threshold") || label.includes("baseline") || label.includes("average")) return "";
+            const n = Number(value);
+            if (!isFinite(n) || n === 0) return "";
+            return n.toFixed(0);
+          }
+        }
+      },
+scales: {
+  x: {
+    ticks: {
+      font: {
+        size: 16
+      }
+    }
+  },
+  y: {
+    beginAtZero: true,
+    ticks: {
+      font: {
+        size: 16
+      }
+    }
+  }
+}
+    };
+  }
+
+  function buildCharts() {
+    destroyCharts();
+    const container = document.getElementById("chartsContainer");
+    container.innerHTML = "";
+
+    const defs = [
+      { key: "breakMix", title: "Break mix (stacked): 15 vs 30 vs 45 minutes" },
+      { key: "acwDaily", title: "After Call Work per day" },
+      { key: "activitySeries", title: "Activity trends: Escalations, Emails, Tasks, Training, Meeting" }
+    ];
+
+    defs.forEach(def => {
+      const id = "chart_" + def.key;
+      const wrap = document.createElement("div");
+      wrap.className = "chart-wrapper";
+      wrap.innerHTML = `<div class="chart-title">${def.title}</div><div class="chart-canvas"><canvas id="${id}"></canvas></div>`;
+      container.appendChild(wrap);
+
+      const ctx = document.getElementById(id).getContext("2d");
+      charts[def.key] = new Chart(ctx, {
+        type: "bar",
+        data: { labels: [], datasets: [] },
+        options: baseChartOptions()
+      });
+    });
+  }
+
+  function updateCharts(derived) {
+    const byDate = new Map();
+    derived.forEach(r => {
+      const d = r.__date || "";
+      if (!d) return;
+      if (!byDate.has(d)) byDate.set(d, []);
+      byDate.get(d).push(r);
+    });
+    const dates = Array.from(byDate.keys()).sort();
+
+    function sumKey(rows, key) {
+      return (rows || [])
+        .map(x => Number(x[key]))
+        .filter(v => isFinite(v))
+        .reduce((a, b) => a + b, 0);
+    }
+
+    // Break mix
+    const c2 = charts["breakMix"];
+    if (c2) {
+      const b15 = dates.map(d => sumKey(byDate.get(d), "__break15Min"));
+      const b30 = dates.map(d => sumKey(byDate.get(d), "__break30Min"));
+      const b45 = dates.map(d => sumKey(byDate.get(d), "__break45Min"));
+      const baseline = Number(document.getElementById("baselineSelect")?.value) || 60;
+
+      c2.options.scales = { x: { stacked: true }, y: { stacked: true, beginAtZero: true } };
+      c2.data.labels = dates;
+      c2.data.datasets = [
+        { label: "Break 15 (mins)", data: b15 },
+        { label: "Break 30 (mins)", data: b30 },
+        { label: "Break 45 (mins)", data: b45 },
+        { label: "Baseline", data: dates.map(() => baseline), type: "line", fill: false, pointRadius: 0, borderDash: [6, 6] }
+      ];
+      c2.update();
+    }
+
+    // ACW line chart with moving target of 2 minutes per call
+    const c4 = charts["acwDaily"];
+    if (c4) {
+      const acw = dates.map(d => sumKey(byDate.get(d), "__acwMin"));
+      const totalCallsByDate = dates.map(d =>
+        sumKey(byDate.get(d), "__contactsIn") + sumKey(byDate.get(d), "__contactsOut")
+      );
+      const thresholdByDate = totalCallsByDate.map(calls => isFinite(calls) ? calls * 2 : 0);
+      c4.config.type = "line";
+      c4.options.scales = { x: { stacked: false }, y: { beginAtZero: true } };
+      c4.options.plugins.legend = { display: true, position: "top" };
+      c4.options.plugins.datalabels = { display: false };
+      c4.data.labels = dates;
+      c4.data.datasets = [
+        {
+          label: "After Call Work",
+          data: acw,
+          fill: false,
+          tension: 0.25,
+          pointRadius: 2,
+          pointHoverRadius: 4,
+          borderWidth: 2,
+          borderColor: "#61dDAa",
+          backgroundColor: "rgba(97,221,170,0.16)"
+        },
+        {
+          label: "Target (2 mins per call)",
+          data: thresholdByDate,
+          fill: false,
+          tension: 0,
+          pointRadius: 0,
+          borderWidth: 2,
+          borderDash: [6, 6],
+          borderColor: "#65789b",
+          backgroundColor: "rgba(101,120,155,0.16)"
+        }
+      ];
+      c4.update();
+    }
+
+    // Combined activity line chart
+    const c6 = charts["activitySeries"];
+    if (c6) {
+      const escalations = dates.map(d => sumKey(byDate.get(d), "__escMin"));
+      const emails = dates.map(d => sumKey(byDate.get(d), "__emailsMin"));
+      const tasks = dates.map(d => sumKey(byDate.get(d), "__tasksMin"));
+      const training = dates.map(d => sumKey(byDate.get(d), "__trainingMin"));
+      const meeting = dates.map(d => sumKey(byDate.get(d), "__meetingMin"));
+
+      const palette = [
+        { border: "#5b8ff9", bg: "rgba(91,143,249,0.16)" },
+        { border: "#61dDAa", bg: "rgba(97,221,170,0.16)" },
+        { border: "#65789b", bg: "rgba(101,120,155,0.16)" },
+        { border: "#f6bd16", bg: "rgba(246,189,22,0.16)" },
+        { border: "#7262fd", bg: "rgba(114,98,253,0.16)" }
+      ];
+
+      const series = [
+        { label: "Escalations", data: escalations },
+        { label: "Emails", data: emails },
+        { label: "Tasks", data: tasks },
+        { label: "Training", data: training },
+        { label: "Meeting", data: meeting }
+      ];
+
+      c6.config.type = "line";
+      c6.options.scales = { x: { stacked: false }, y: { beginAtZero: true } };
+      c6.options.plugins.legend = { display: true, position: "top" };
+      c6.options.plugins.datalabels = { display: false };
+      c6.data.labels = dates;
+      c6.data.datasets = series.map((s, i) => ({
+        label: s.label,
+        data: s.data,
+        fill: false,
+        tension: 0.25,
+        pointRadius: 2,
+        pointHoverRadius: 4,
+        borderWidth: 2,
+        borderColor: palette[i].border,
+        backgroundColor: palette[i].bg
+      }));
+      c6.update();
+    }
+  }
+
+  function getSelectedAgentLabelSafe() {
+    const sel = document.getElementById("agentSelect");
+    if (!sel) return "All Agents";
+    const opt = sel.options[sel.selectedIndex];
+    return opt && (opt.textContent || opt.text) ? String(opt.textContent || opt.text).trim() : "All Agents";
+  }
+
+  function getSelectedMonthLabelSafe() {
+    const sel = document.getElementById("monthSelect");
+    if (!sel) return "All months";
+    const opt = sel.options[sel.selectedIndex];
+    const m = opt && (opt.textContent || opt.text) ? String(opt.textContent || opt.text).trim() : "All months";
+    if (m === "All months") return m;
+    const full = monthFullMap[m] || m;
+    const selected = (typeof rawRows !== 'undefined' && Array.isArray(rawRows)) ? normaliseRows(rawRows) : [];
+    const agent = (document.getElementById('agentSelect') || {}).value || "";
+    let filtered = selected;
+    if (agent) filtered = filtered.filter(r => String(r[FIELD_AGENT]) === agent);
+    filtered = filtered.filter(r => r.__month === m);
+    const year = filtered.length ? (filtered[0].__year || "") : "";
+    return year ? `${full} ${year}` : full;
+  }
+
+  function updateDashboardTitle() {
+    const titleEl = document.getElementById("dashboardTitle");
+    if (!titleEl) return;
+    const agentLabel = getSelectedAgentLabelSafe();
+    const monthLabel = getSelectedMonthLabelSafe();
+    const hasAgent = agentLabel && agentLabel !== "All Agents";
+    const hasMonth = monthLabel && monthLabel !== "All months";
+    let title = "Monthly Scorecard";
+    if (hasAgent && hasMonth) title = `Monthly Scorecard for ${agentLabel} | ${monthLabel}`;
+    else if (hasAgent) title = `Monthly Scorecard for ${agentLabel}`;
+    else if (hasMonth) title = `Monthly Scorecard | ${monthLabel}`;
+    titleEl.textContent = title;
+    document.title = title;
+  }
+
+  function formatPrettyDate(dateKey) {
+    const d = parseIsoDate(String(dateKey) + "T00:00:00");
+    if (!d) return String(dateKey || "");
+    return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'long' });
+  }
+
+  function renderSimpleSummaryTable(targetId, rows, valueLabel) {
+    const el = document.getElementById(targetId);
+    if (!el) return;
+    if (!rows.length) {
+      el.innerHTML = '<div class="empty-note">None</div>';
+      return;
+    }
+    const body = rows.map(r => `<tr><td>${r.label}</td><td>${r.value}</td></tr>`).join('');
+    el.innerHTML = `<table><thead><tr><th>Date</th><th>${valueLabel}</th></tr></thead><tbody>${body}</tbody></table>`;
+  }
+
+  function renderSummaryCards(derived) {
+    const byDate = new Map();
+    derived.forEach(r => {
+      const d = r.__date || "";
+      if (!d) return;
+      if (!byDate.has(d)) byDate.set(d, []);
+      byDate.get(d).push(r);
+    });
+    const dates = Array.from(byDate.keys()).sort();
+
+    const missedRows = dates
+      .map(d => ({ date: d, count: byDate.get(d).reduce((a, r) => a + (Number(r.__contactsMissed) || 0), 0) }))
+      .filter(x => x.count > 0)
+      .map(x => ({ label: formatPrettyDate(x.date), value: String(Math.round(x.count)) }));
+
+    const personalRows = dates
+      .map(d => ({ date: d, mins: byDate.get(d).reduce((a, r) => a + (Number(r.__personalMin) || 0), 0) }))
+      .filter(x => x.mins > 15)
+      .map(x => ({ label: formatPrettyDate(x.date), value: `${x.mins.toFixed(1)} mins` }));
+
+    renderSimpleSummaryTable('missedDatesCard', missedRows, 'Count');
+    renderSimpleSummaryTable('personalExceededCard', personalRows, 'Personal');
+  }
+
+  function refresh() {
+    if (!Array.isArray(rawRows) || !rawRows.length) rawRows = EMBEDDED_SAMPLE_ROWS.slice();
+    const fileStatusEl = document.getElementById("fileStatus");
+    if (fileStatusEl && (!fileStatusEl.textContent || /waiting/i.test(fileStatusEl.textContent))) fileStatusEl.textContent = "Using attached sample data";
+    const agent = document.getElementById("agentSelect").value;
+    const month = document.getElementById("monthSelect").value;
+
+    const derivedAll = normaliseRows(rawRows);
+
+    const forMonthList = agent ? derivedAll.filter(r => String(r[FIELD_AGENT]) === agent) : derivedAll;
+    rebuildMonthDropdown(forMonthList);
+
+    const monthSel = document.getElementById("monthSelect");
+    const stillExists = Array.from(monthSel.options).some(o => o.value === month);
+    monthSel.value = stillExists ? month : "";
+
+    let derived = agent ? derivedAll.filter(r => String(r[FIELD_AGENT]) === agent) : derivedAll;
+    const chosenMonth = monthSel.value;
+    if (chosenMonth) derived = derived.filter(r => r.__month === chosenMonth);
+
+    updateDashboardTitle();
+    renderTiles(derived);
+    renderSummaryCards(derived);
+    wireDutySelects();
+    updateCharts(derived);
+  }
+
+  function toggleTable() {
+    const wrap = document.getElementById("tableWrap");
+    const btn = document.getElementById("toggleTableBtn");
+    const status = document.getElementById("tableStatus");
+    if (!wrap || !btn) return;
+    const isHidden = !wrap || wrap.style.display === "none";
+    if (isHidden) {
+      wrap.style.display = "block";
+      btn.textContent = "Hide table";
+      if (status) status.textContent = "Table shown";
+    } else {
+      wrap.style.display = "none";
+      btn.textContent = "Show table";
+      if (status) status.textContent = "Table hidden";
+    }
+  }
+
+  function loadCsvText(text) {
+    const parsed = Papa.parse(text, { header: true, skipEmptyLines: true, dynamicTyping: true });
+    if (parsed.errors && parsed.errors.length) console.warn(parsed.errors);
+    rawRows = (parsed.data && parsed.data.length) ? parsed.data : EMBEDDED_SAMPLE_ROWS.slice();
+    rebuildAgentDropdown();
+    buildCharts();
+    wireDutySelects();
+    refresh();
+  }
+
+  document.getElementById("fileInput").addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    document.getElementById("fileStatus").textContent = "Loaded: " + file.name;
+    const reader = new FileReader();
+    reader.onload = () => loadCsvText(String(reader.result || ""));
+    reader.readAsText(file);
+  });
+
+  document.getElementById("agentSelect").addEventListener("change", refresh);
+  document.getElementById("monthSelect").addEventListener("change", refresh);
+  document.getElementById("thresholdMode").addEventListener("change", refresh);
+  document.getElementById("baselineSelect").addEventListener("change", refresh);
+  const refreshBtn = document.getElementById("refreshBtn");
+  if (refreshBtn) refreshBtn.addEventListener("click", refresh);
+
+  function isReferenceDatasetLabel(label) {
+    return /threshold|baseline|average/i.test(String(label || ""));
+  }
+
+  function applyPrintChartFilter() {
+    Object.values(charts).forEach(ch => {
+      try {
+        if (!ch || !ch.data || !Array.isArray(ch.data.labels) || !Array.isArray(ch.data.datasets)) return;
+        if (!ch.$printOriginal) {
+          ch.$printOriginal = {
+            labels: ch.data.labels.slice(),
+            datasets: ch.data.datasets.map(ds => ({ ...ds, data: Array.isArray(ds.data) ? ds.data.slice() : ds.data }))
+          };
+        }
+        const labels = ch.$printOriginal.labels.slice();
+        const datasets = ch.$printOriginal.datasets.map(ds => ({ ...ds, data: Array.isArray(ds.data) ? ds.data.slice() : ds.data }));
+        const keepIdx = labels.map((_, idx) => {
+          return datasets.some(ds => {
+            if (isReferenceDatasetLabel(ds.label)) return false;
+            const v = Array.isArray(ds.data) ? Number(ds.data[idx]) : NaN;
+            return isFinite(v) && Math.abs(v) > 0.5;
+          });
+        });
+        if (!keepIdx.some(Boolean)) {
+          ch.data.labels = labels;
+          ch.data.datasets = datasets;
+        } else {
+          ch.data.labels = labels.filter((_, idx) => keepIdx[idx]);
+          ch.data.datasets = datasets.map(ds => ({
+            ...ds,
+            data: Array.isArray(ds.data) ? ds.data.filter((_, idx) => keepIdx[idx]) : ds.data
+          }));
+        }
+        ch.resize();
+        ch.update('none');
+      } catch(e) {}
+    });
+  }
+
+  function restorePrintChartFilter() {
+    Object.values(charts).forEach(ch => {
+      try {
+        if (!ch || !ch.$printOriginal) return;
+        ch.data.labels = ch.$printOriginal.labels.slice();
+        ch.data.datasets = ch.$printOriginal.datasets.map(ds => ({ ...ds, data: Array.isArray(ds.data) ? ds.data.slice() : ds.data }));
+        delete ch.$printOriginal;
+        ch.resize();
+        ch.update('none');
+      } catch(e) {}
+    });
+  }
+
+  function resizeChartsForPrint() {
+    applyPrintChartFilter();
+    Object.values(charts).forEach(ch => {
+      try { ch.resize(); ch.update("none"); } catch(e) {}
+    });
+  }
+  window.addEventListener("beforeprint", resizeChartsForPrint);
+  window.addEventListener("afterprint", restorePrintChartFilter);
+  if (window.matchMedia) {
+    const mql = window.matchMedia("print");
+    const handlePrintChange = (e) => {
+      if (e.matches) resizeChartsForPrint();
+      else restorePrintChartFilter();
+    };
+    if (mql.addEventListener) {
+      mql.addEventListener("change", handlePrintChange);
+    } else if (mql.addListener) {
+      mql.addListener(handlePrintChange);
+    }
+  }
+
+  function initialiseDashboardWithSampleData() {
+    rawRows = EMBEDDED_SAMPLE_ROWS.slice();
+    const fileStatusEl = document.getElementById("fileStatus");
+    if (fileStatusEl) fileStatusEl.textContent = "Using attached sample data";
+    rebuildAgentDropdown();
+    buildCharts();
+    wireDutySelects();
+    refresh();
+  }
+
+  // Init
+  initialiseDashboardWithSampleData();
+</script>
+
+<script>
+// ======== Export-to-PDF Settings (easy to tweak) ========
+const EXPORT_PDF = {
+  fileNamePrefix: 'Monthly Scorecard',
+  pageFormat: 'a4',
+  orientation: 'landscape',
+  marginsMM: 8,
+  imageQuality: 0.98,
+  renderScale: 2.5,
+  includeLogoInPdf: false,
+  hotkeyEnabled: true,
+  hotkey: 'Ctrl+Shift+E'
+};
+
+function getSelectedText(id, fallback='All'){
+  const el=document.getElementById(id); if(!el) return fallback;
+  const opt=el.options[el.selectedIndex]; const t=(opt&&(opt.text||opt.value))?String(opt.text||opt.value).trim():'';
+  return t || fallback;
+}
+const getSelectedAgentLabel = ()=> getSelectedText('agentSelect','All Agents');
+const getSelectedMonthLabel = ()=> { const m = getSelectedText('monthSelect','All months'); if (m === 'All months') return m; const full = monthFullMap[m] || String(m).toUpperCase(); const selected = (typeof rawRows !== 'undefined' && Array.isArray(rawRows)) ? normaliseRows(rawRows) : []; const agent = (document.getElementById('agentSelect')||{}).value || ""; let filtered = selected; if (agent) filtered = filtered.filter(r => String(r[FIELD_AGENT]) === agent); filtered = filtered.filter(r => r.__month === m); const year = filtered.length ? (filtered[0].__year || "") : ""; return year ? `${full} ${year}` : full; };
+function getDashboardTitle(){ const h2=document.getElementById('dashboardTitle') || document.querySelector('.header h2'); return h2? h2.textContent.trim() : EXPORT_PDF.fileNamePrefix; }
+function buildPdfFilename(){ const n=new Date(), y=n.getFullYear(), m=String(n.getMonth()+1).padStart(2,'0'), d=String(n.getDate()).padStart(2,'0');
+  const agent = getSelectedAgentLabel();
+  const monthYear = getSelectedMonthLabel();
+  const base = `CSD Monthly Scorecard for ${agent} - ${monthYear} - ${y}${m}${d}.pdf`;
+  return base.replace(/\s+/g,' ').replace(/[\/\\:?*"<>|]+/g,'-'); }
+function showPdfMetaTemporarily(show){ const meta=document.getElementById('pdfMeta'); if(!meta) return; meta.textContent=""; meta.style.display="none"; }
+function applyExportPrintMode(enable){
+  const area=document.getElementById('dashboardArea');
+  if(!area) return;
+  area.classList.toggle('for-pdf-print', !!enable);
+  const logo = document.querySelector('img[alt="ITS Technology Solutions"]');
+  if(logo){
+    if(enable && !EXPORT_PDF.includeLogoInPdf){ logo.setAttribute('data-export-hidden','true'); logo.style.display='none'; }
+    else if(logo.getAttribute('data-export-hidden')==='true'){ logo.style.display=''; logo.removeAttribute('data-export-hidden'); }
+  }
+}
+
+async function renderElementToCanvas(el){
+  return await html2canvas(el, {
+    scale: EXPORT_PDF.renderScale,
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: '#ffffff',
+    logging: false,
+    windowWidth: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth, el.scrollWidth || 0),
+    onclone: (clonedDoc) => {
+      const cloneLogo = clonedDoc.querySelector('img[alt="ITS Technology Solutions"]');
+      if (cloneLogo && !EXPORT_PDF.includeLogoInPdf) cloneLogo.remove();
+      const cloneArea = clonedDoc.getElementById('dashboardArea');
+      if (cloneArea) cloneArea.classList.add('for-pdf-print');
+    }
+  });
+}
+
+function addCanvasToPdf(pdf, canvas, cursorY, pageWidth, pageHeight, margin){
+  const usableWidth = pageWidth - (margin * 2);
+  const imgHeight = (canvas.height * usableWidth) / canvas.width;
+  const remaining = pageHeight - margin - cursorY;
+  if (imgHeight > remaining && cursorY > margin) {
+    pdf.addPage();
+    cursorY = margin;
+  }
+  const imgData = canvas.toDataURL('image/jpeg', EXPORT_PDF.imageQuality);
+  pdf.addImage(imgData, 'JPEG', margin, cursorY, usableWidth, imgHeight, undefined, 'FAST');
+  return cursorY + imgHeight + 4;
+}
+
+async function exportDashboardToPdf(){
+  const area=document.getElementById('dashboardArea'); if(!area){ alert('Export region not found.'); return; }
+  const jsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF || (window.html2pdf && window.html2pdf().get ? null : null);
+  if(typeof html2canvas !== 'function'){
+    alert('PDF export library failed to load.');
+    return;
+  }
+  if(!jsPDF && !(window.html2pdf || window.html2pdf?.Worker)){
+    if(window.print){
+      alert('The PDF library did not load, so this will use your browser print dialog instead. Choose Save as PDF.');
+      applyExportPrintMode(true);
+      showPdfMetaTemporarily(true);
+      setTimeout(() => {
+        window.print();
+        showPdfMetaTemporarily(false);
+        applyExportPrintMode(false);
+      }, 200);
+      return;
+    }
+    alert('PDF library failed to load.');
+    return;
+  }
+
+  applyExportPrintMode(true);
+  showPdfMetaTemporarily(true);
+  applyPrintChartFilter();
+
+  const chartInstances = window.Chart && Chart.instances ? (Array.isArray(Chart.instances) ? Chart.instances : Object.values(Chart.instances)) : [];
+  chartInstances.forEach(ch => { try { ch.resize(); ch.update('none'); } catch(e) {} });
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  try {
+    const pdf = new jsPDF({ unit:'mm', format: EXPORT_PDF.pageFormat, orientation: EXPORT_PDF.orientation, compress: true });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = EXPORT_PDF.marginsMM;
+    let cursorY = margin;
+
+    const header = document.querySelector('.header');
+    const controls = document.querySelector('.controls');
+    const summaryParts = [];
+    if (header) summaryParts.push(header.outerHTML);
+    const pdfMeta = document.getElementById('pdfMeta');
+    if (pdfMeta) summaryParts.push(pdfMeta.outerHTML);
+    const intro = area.querySelector('.hint, p');
+    if (intro) summaryParts.push(intro.outerHTML);
+    const topTiles = document.getElementById('topTiles');
+    if (topTiles) {
+      const topTilesClone = topTiles.cloneNode(true);
+      topTilesClone.querySelectorAll('.mini-qa-input').forEach((inputEl, idx) => {
+        const printDiv = document.createElement('div');
+        printDiv.className = 'print-qa-value';
+        const raw = String(inputEl.value || '').trim();
+        printDiv.textContent = raw ? (/%$/.test(raw) ? raw : (raw + QA_CONFIG.inputDisplaySuffix)) : '';
+        inputEl.replaceWith(printDiv);
+      });
+      summaryParts.push(topTilesClone.outerHTML);
+    }
+    const tiles = document.getElementById('tiles');
+    if (tiles) summaryParts.push(tiles.outerHTML);
+    const feedbackGrid = area.querySelector('.feedback-grid');
+    if (feedbackGrid) {
+      const feedbackClone = feedbackGrid.cloneNode(true);
+      const sourceTextareas = feedbackGrid.querySelectorAll('textarea');
+      const clonedTextareas = feedbackClone.querySelectorAll('textarea');
+      clonedTextareas.forEach((ta, idx) => {
+        const source = sourceTextareas[idx];
+        const value = source ? String(source.value || '') : '';
+        const printDiv = document.createElement('div');
+        printDiv.className = 'print-feedback-value';
+        printDiv.style.whiteSpace = 'pre-wrap';
+        printDiv.style.overflowWrap = 'anywhere';
+        printDiv.style.wordBreak = 'break-word';
+        printDiv.innerHTML = String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+        ta.replaceWith(printDiv);
+      });
+      const sourceSelects = feedbackGrid.querySelectorAll('select.duties-select');
+      const clonedSelects = feedbackClone.querySelectorAll('select.duties-select');
+      clonedSelects.forEach((sel, idx) => {
+        const source = sourceSelects[idx];
+        const selectedText = source && source.selectedIndex >= 0 && source.options && source.options[source.selectedIndex]
+          ? String(source.options[source.selectedIndex].textContent || source.options[source.selectedIndex].text || '').trim()
+          : '';
+        const value = selectedText || (source ? String(source.value || '').trim() : '');
+        const printDiv = document.createElement('div');
+        printDiv.className = 'print-duty-value';
+        printDiv.textContent = value;
+        printDiv.style.color = '#111';
+        printDiv.style.display = 'flex';
+        printDiv.style.alignItems = 'center';
+        printDiv.style.justifyContent = 'flex-start';
+        printDiv.style.whiteSpace = 'normal';
+        printDiv.style.minHeight = '18px';
+        sel.replaceWith(printDiv);
+      });
+      summaryParts.push(feedbackClone.outerHTML);
+    }
+
+    const temp = document.createElement('div');
+    temp.style.position = 'fixed';
+    temp.style.left = '-10000px';
+    temp.style.top = '0';
+    temp.style.width = area.getBoundingClientRect().width + 'px';
+    temp.style.background = '#ffffff';
+    temp.style.padding = '0';
+    temp.innerHTML = summaryParts.join('');
+    document.body.appendChild(temp);
+
+    const summaryCanvas = await renderElementToCanvas(temp);
+    cursorY = addCanvasToPdf(pdf, summaryCanvas, cursorY, pageWidth, pageHeight, margin);
+    temp.remove();
+
+    const chartWrappers = Array.from(area.querySelectorAll('.chart-wrapper'));
+    if (chartWrappers.length) {
+      pdf.addPage();
+      cursorY = margin;
+    }
+    for (const wrapper of chartWrappers) {
+      const chartCanvas = await renderElementToCanvas(wrapper);
+      cursorY = addCanvasToPdf(pdf, chartCanvas, cursorY, pageWidth, pageHeight, margin);
+    }
+
+    pdf.save(buildPdfFilename());
+  } catch(err){
+    console.error('PDF export failed:', err);
+    alert('Sorry, the PDF export failed.');
+  } finally {
+    restorePrintChartFilter();
+    showPdfMetaTemporarily(false);
+    applyExportPrintMode(false);
+  }
+}
+// Wire button
+(function(){ const exportBtn=document.getElementById('btnExportPdf'); if(exportBtn){ exportBtn.addEventListener('click', exportDashboardToPdf); }})();
+
+// Hotkey
+(function(){ if(!EXPORT_PDF.hotkeyEnabled) return; const want=String(EXPORT_PDF.hotkey||'').toLowerCase().replace(/\s+/g,''); if(!want) return; document.addEventListener('keydown', e=>{ const p=want.split('+'); const needCtrl=p.includes('ctrl'); const needCmd=p.includes('cmd')||p.includes('meta'); const needAlt=p.includes('alt'); const needShift=p.includes('shift'); const main=p[p.length-1]; const match=(e.key||'').toLowerCase()===main; if((needCtrl&&!e.ctrlKey)||(needCmd&&!e.metaKey)||(needAlt&&!e.altKey)||(needShift&&!e.shiftKey)||!match) return; e.preventDefault(); exportDashboardToPdf(); }, true); })();
+</script>
+
+</body>
+</html>
