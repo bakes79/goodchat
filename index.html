@@ -10,7 +10,7 @@
       --bg2: #ffffff;
       --text: #111827;
       --muted: #6b7280;
-      --card: rgba(255,255,255,0.9);
+      --card: rgba(255,255,255,0.92);
       --border: #e5e7eb;
       --shadow: 0 12px 30px rgba(0,0,0,0.08);
       --radius: 18px;
@@ -23,6 +23,7 @@
       font-family: Arial, sans-serif;
       color: var(--text);
       background: linear-gradient(180deg, var(--bg1) 0%, var(--bg2) 55%);
+      min-height: 100vh;
     }
 
     .container {
@@ -109,48 +110,164 @@
       font-size: 13px;
     }
 
+    .hidden { display: none !important; }
+
+    .gate {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: linear-gradient(180deg, rgba(244,247,251,0.96) 0%, rgba(255,255,255,0.98) 55%);
+      z-index: 9999;
+    }
+
+    .gate-card {
+      width: min(100%, 420px);
+      background: rgba(255,255,255,0.96);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .gate-card h2 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+
+    .gate-card p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .gate-card input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 15px;
+      outline: none;
+      margin-bottom: 12px;
+    }
+
+    .gate-card button {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #111827;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .gate-card button:hover {
+      opacity: 0.95;
+    }
+
+    .error {
+      margin-top: 12px;
+      color: #b91c1c;
+      font-size: 13px;
+      min-height: 18px;
+    }
+
     @media (max-width: 640px) {
       h1 { font-size: 24px; }
-      .hero, .card { padding: 16px; }
+      .hero, .card, .gate-card { padding: 16px; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <section class="hero">
-      <h1>My HTML Pages</h1>
-      <p class="subtext">Use this page as a simple homepage for your dashboards, tools and reports.</p>
-    </section>
-
-    <section class="grid">
-      <article class="card">
-        <h2>Dashboard 1</h2>
-        <p>Replace this text with a short description of what this page does.</p>
-        <a href="dashboard1.html">Open Page</a>
-      </article>
-
-      <article class="card">
-        <h2>Dashboard 2</h2>
-        <p>Replace this text with a short description of what this page does.</p>
-        <a href="dashboard2.html">Open Page</a>
-      </article>
-
-      <article class="card">
-        <h2>Report Page</h2>
-        <p>Use this tile for a report, printable page or anything else you want quick access to.</p>
-        <a href="report.html">Open Page</a>
-      </article>
-
-      <article class="card">
-        <h2>Tool Page</h2>
-        <p>Add as many of these cards as you need and point them to your other HTML files.</p>
-        <a href="tool.html">Open Page</a>
-      </article>
-    </section>
-
-    <div class="footer">
-      Update each link so it matches the exact file name of your other HTML pages.
+  <div id="passwordGate" class="gate">
+    <div class="gate-card">
+      <h2>Protected Page</h2>
+      <p>Enter the password to open your homepage.</p>
+      <input type="password" id="passwordInput" placeholder="Enter password" autocomplete="current-password" />
+      <button type="button" id="unlockBtn">Unlock</button>
+      <div class="error" id="gateError"></div>
     </div>
   </div>
+
+  <div id="siteContent" class="hidden">
+    <div class="container">
+      <section class="hero">
+        <h1>My HTML Pages</h1>
+        <p class="subtext">Use this page as a simple homepage for your dashboards, tools and reports.</p>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>Dashboard 1</h2>
+          <p>Replace this text with a short description of what this page does.</p>
+          <a href="dashboard1.html">Open Page</a>
+        </article>
+
+        <article class="card">
+          <h2>Dashboard 2</h2>
+          <p>Replace this text with a short description of what this page does.</p>
+          <a href="dashboard2.html">Open Page</a>
+        </article>
+
+        <article class="card">
+          <h2>Report Page</h2>
+          <p>Use this tile for a report, printable page or anything else you want quick access to.</p>
+          <a href="report.html">Open Page</a>
+        </article>
+
+        <article class="card">
+          <h2>Tool Page</h2>
+          <p>Add as many of these cards as you need and point them to your other HTML files.</p>
+          <a href="tool.html">Open Page</a>
+        </article>
+      </section>
+
+      <div class="footer">
+        Update each link so it matches the exact file name of your other HTML pages.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PAGE_PASSWORD = 'changeme123';
+    const STORAGE_KEY = 'site_access_granted';
+
+    const gate = document.getElementById('passwordGate');
+    const content = document.getElementById('siteContent');
+    const input = document.getElementById('passwordInput');
+    const button = document.getElementById('unlockBtn');
+    const error = document.getElementById('gateError');
+
+    function showContent() {
+      gate.classList.add('hidden');
+      content.classList.remove('hidden');
+    }
+
+    function unlock() {
+      if (input.value === PAGE_PASSWORD) {
+        sessionStorage.setItem(STORAGE_KEY, 'true');
+        error.textContent = '';
+        showContent();
+      } else {
+        error.textContent = 'Incorrect password';
+      }
+    }
+
+    if (sessionStorage.getItem(STORAGE_KEY) === 'true') {
+      showContent();
+    } else {
+      input.focus();
+    }
+
+    button.addEventListener('click', unlock);
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') unlock();
+    });
+  </script>
 </body>
 </html>
