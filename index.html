@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Good Chat Dashboards</title>
+<style>
+  :root{
+    --bg:#020817;
+    --bg2:#07122f;
+    --text:#f8fbff;
+    --muted:#98a6c7;
+    --pink:#ff2bd6;
+    --blue:#1e7cff;
+    --cyan:#11d7ff;
+  }
+
+  *{box-sizing:border-box}
+
+  html,body{
+    margin:0;
+    min-height:100%;
+    font-family: Inter, Arial, Helvetica, sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(900px 420px at 50% -10%, rgba(26,122,255,.18), transparent 60%),
+      radial-gradient(500px 280px at 18% 82%, rgba(255,43,214,.08), transparent 60%),
+      radial-gradient(420px 240px at 85% 18%, rgba(17,215,255,.08), transparent 60%),
+      linear-gradient(180deg, #030b22 0%, #020817 100%);
+  }
+
+  body::before{
+    content:"";
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    opacity:.18;
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(255,255,255,.22) 1px, transparent 0);
+    background-size: 3px 3px;
+    mix-blend-mode:screen;
+  }
+
+  .wrap{
+    width:min(1120px, calc(100% - 48px));
+    margin:0 auto;
+    padding:46px 0 44px;
+  }
+
+  .hero{
+    text-align:center;
+    padding:2px 0 36px;
+  }
+
+  .eyebrow{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-height:60px;
+    padding:0 14px;
+    border-radius:999px;
+    border:1px solid transparent;
+    background:
+      linear-gradient(#07112b, #07112b) padding-box,
+      linear-gradient(90deg, var(--pink), var(--cyan)) border-box;
+    color:#eef6ff;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+    box-shadow:0 0 0 1px rgba(255,255,255,.02) inset;
+  }
+
+  h1{
+    margin:18px 0 10px;
+    font-size:clamp(42px, 6vw, 60px);
+    line-height:1.06;
+    font-weight:800;
+    letter-spacing:-.04em;
+    text-wrap:balance;
+  }
+
+  .subtitle{
+    margin:0;
+    font-size:18px;
+    color:#aab6d2;
+    font-weight:500;
+  }
+
+  .hero-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    margin-top:24px;
+    min-width:170px;
+    height:42px;
+    padding:0 20px;
+    border:none;
+    border-radius:12px;
+    color:white;
+    font-size:14px;
+    font-weight:600;
+    text-decoration:none;
+    background:linear-gradient(180deg, #2892ff 0%, #0a6cff 100%);
+    box-shadow:
+      0 10px 24px rgba(0, 93, 255, .28),
+      inset 0 1px 0 rgba(255,255,255,.18);
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:18px;
+  }
+
+  .card-link{
+    display:block;
+    text-decoration:none;
+    color:inherit;
+  }
+
+  .card{
+    position:relative;
+    min-height:300px;
+    border-radius:12px;
+    padding:15px 15px 14px;
+    background:
+      linear-gradient(180deg, rgba(6,15,42,.96) 0%, rgba(4,11,32,.98) 100%) padding-box,
+      linear-gradient(90deg, var(--pink), #7d4bff 45%, var(--blue) 100%) border-box;
+    border:1px solid transparent;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.04),
+      0 0 0 1px rgba(255,255,255,.02),
+      0 16px 36px rgba(0,0,0,.28);
+    transition:transform .18s ease, box-shadow .18s ease;
+  }
+
+  .card-link:hover .card{
+    transform:translateY(-2px);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.04),
+      0 0 0 1px rgba(255,255,255,.03),
+      0 20px 44px rgba(0,0,0,.34);
+  }
+
+  .card-topline{
+    margin:0 0 10px;
+    font-size:12px;
+    line-height:1.2;
+    font-weight:700;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:#d7e5ff;
+    opacity:.72;
+  }
+
+  .heading{
+    margin:0 0 8px;
+    font-size:20px;
+    line-height:1.15;
+    font-weight:700;
+    letter-spacing:-.02em;
+    color:#f7fbff;
+  }
+
+  .card-copy{
+    margin:0 0 12px;
+    font-size:14px;
+    line-height:1.5;
+    color:#98a7c6;
+  }
+
+  .pill-row{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:auto;
+    margin-bottom:auto;
+  }
+
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    min-height:24px;
+    padding:0 10px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:600;
+    color:#d8e6ff;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08);
+  }
+
+  .cta{
+    font-size:12px;
+    font-weight:500;
+    text-decoration:none;
+    color:#ff47d8;
+        margin-bottom:auto;
+
+  }
+
+  @media (max-width: 980px){
+    .grid{grid-template-columns:repeat(2, minmax(0, 1fr));}
+  }
+
+  @media (max-width: 620px){
+    .wrap{width:min(100%, calc(100% - 28px)); padding-top:28px;}
+    h1{font-size:36px}
+    .grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <div class="eyebrow">Dashboard Command Centre</div>
+      <h1>Good Chat Dashboards</h1>
+      <p class="subtitle">Empowering Leaders</p>
+    </section>
+
+    <section id="dashboards" class="grid">
+      <a class="card-link" href="CSD-Scorecard.html">
+        <div class="card">
+          <div class="card-topline">Performance and coaching</div>
+          <p class="heading">CSD Scorecard</p>
+          <p class="card-copy">Monthly KPI view with QA capture, duties observations, missed-call summaries, export-ready layout, and coaching commentary.</p>
+          <div class="pill-row">
+            <span class="pill">KPIs</span><span class="pill">QA</span><span class="pill">PDF Export</span>
+          </div>
+          <div class="cta">View Dashboard</div>
+        </div>
+      </a>
+
+            <a class="card-link" href="CSD Ticket Backlog Studio.html">
+        <div class="card">
+          <div class="card-topline">Operational visibility</div>
+          <p class="heading">CSD Ticket Backlog Studio</p>
+          <p class="card-copy">Review backlog tickets with base filters and JSON import/export for backup and recovery.</p><br>
+          <div class="pill-row">
+            <span class="pill">Ops</span><span class="pill">Tickets</span><span class="pill">Visibility</span>
+          </div>
+          <div class="cta">View Dashboard</div>
+        </div>
+      </a>
+
+      <a class="card-link" href="adherence.html">
+        <div class="card">
+          <div class="card-topline">Attendance and punctuality</div>
+          <p class="heading">Adherence</p>
+          <p class="card-copy">Track scheduled versus actual behaviour, lateness, early finishes, missing punches, and employee adherence trends.</p><br>
+          <div class="pill-row">
+            <span class="pill">WFD</span><span class="pill">Roster</span><span class="pill">Variance</span>
+          </div>
+          <div class="cta">View Dashboard</div>
+        </div>
+      </a>
+
+      <a class="card-link" href="qa-studio.html">
+        <div class="card">
+          <div class="card-topline">Call review workspace</div>
+          <p class="heading">QA Studio</p>
+          <p class="card-copy">Audit calls, score interactions, capture structured feedback, and drive consistent quality outcomes.</p><br>
+          <div class="pill-row">
+            <span class="pill">Audits</span><span class="pill">Scoring</span><span class="pill">Feedback</span>
+          </div>
+          <div class="cta">View Dashboard</div>
+        </div>
+      </a>
+
+      <a class="card-link" href="interactive-training.html">
+        <div class="card">
+          <div class="card-topline">Learning and capability</div>
+          <p class="heading">Interactive Training</p>
+          <p class="card-copy">Launch the training game experience for live workshops, new starters, and scenario-based learning.</p>
+          <div class="pill-row">
+            <span class="pill">Training</span><span class="pill">Game Mode</span><span class="pill">Scenarios</span>
+          </div>
+          <div class="cta">View Dashboard</div>
+        </div>
+      </a>
+
+
+
+      <a class="card-link" href="prioritisation-bucket.html">
+        <div class="card">
+          <div class="card-topline">Decision support</div>
+          <p class="heading">Prioritisation Bucket</p>
+          <p class="card-copy">Sort work by urgency, exceptions, follow-ups, and operational priorities.</p><br><br><br>
+          <div class="pill-row">
+            <span class="pill">Priority</span><span class="pill">Buckets</span><span class="pill">Rules</span>
+          </div>
+          <div class="cta">View Dashboard</div>
+        </div>
+      </a>
+    </section>
+  </main>
+</body>
+</html>
