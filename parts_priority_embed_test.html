@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parts Priority Pull Tester</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #131c2e;
+      --panel-2: #1a2740;
+      --text: #eef4ff;
+      --muted: #aab8d3;
+      --accent: #58a6ff;
+      --good: #1f9d55;
+      --warn: #d97706;
+      --bad: #dc2626;
+      --border: rgba(255,255,255,0.08);
+      --shadow: 0 12px 30px rgba(0,0,0,0.28);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(180deg, #08111f 0%, #0d1627 100%);
+      color: var(--text);
+    }
+    .container {
+      width: calc(100% - 24px);
+      margin: 12px auto 24px;
+    }
+    .hero, .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+    .hero {
+      padding: 18px 18px 14px;
+      margin-bottom: 14px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.1;
+    }
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 14px;
+    }
+    .card {
+      padding: 16px;
+    }
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    button, .link-btn {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.15s ease, opacity 0.15s ease;
+    }
+    button:hover, .link-btn:hover { transform: translateY(-1px); }
+    .primary { background: var(--accent); color: #071224; }
+    .secondary { background: #233452; color: var(--text); }
+    .ghost { background: #182339; color: var(--muted); }
+    .status {
+      font-size: 13px;
+      line-height: 1.45;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.03);
+      margin-bottom: 12px;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .status.good { border-color: rgba(31,157,85,0.5); background: rgba(31,157,85,0.12); }
+    .status.warn { border-color: rgba(217,119,6,0.5); background: rgba(217,119,6,0.12); }
+    .status.bad { border-color: rgba(220,38,38,0.5); background: rgba(220,38,38,0.12); }
+    .status.info { border-color: rgba(88,166,255,0.5); background: rgba(88,166,255,0.10); }
+    .table-wrap {
+      max-height: 70vh;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(0,0,0,0.16);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      background: transparent;
+    }
+    th, td {
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+      color: #edf3ff;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background: #13213a;
+      z-index: 2;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+    iframe {
+      width: 100%;
+      height: 78vh;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: white;
+    }
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 10px;
+      line-height: 1.45;
+    }
+    code, pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+    pre {
+      background: #0b1322;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      overflow: auto;
+      color: #dbeafe;
+      margin: 10px 0 0;
+    }
+    .inline {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .pill {
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+    @media (max-width: 1100px) {
+      .grid { grid-template-columns: 1fr; }
+      iframe { height: 55vh; }
+      .table-wrap { max-height: 55vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="hero">
+      <h1>Parts Priority Pull Tester</h1>
+      <p>This page gives you both browser-side options in one file: direct fetch and full-page iframe. Host it on GitHub Pages, open it in your normal environment, and see which method the source site permits.</p>
+      <div class="pill-row">
+        <div class="pill">Source: https://partspriority.linfoxag.com/</div>
+        <div class="pill">Option 1: Fetch HTML table</div>
+        <div class="pill">Option 2: Embed via iframe</div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Option 1 - Pull the HTML table into this page</h2>
+        <div class="toolbar">
+          <button class="primary" id="pullTableBtn">Pull latest table</button>
+          <button class="secondary" id="downloadCsvBtn" disabled>Download pulled table as CSV</button>
+          <button class="ghost" id="clearTableBtn">Clear table</button>
+        </div>
+        <div class="status info" id="fetchStatus">Ready. Click “Pull latest table” to test whether the source allows browser-side fetching from your hosted page.</div>
+        <div class="table-wrap" id="tableWrap"></div>
+        <div class="small">
+          If this works, you can reuse the same fetch-and-parse logic inside your existing dashboards.
+        </div>
+        <pre id="fetchDebug">No fetch attempt yet.</pre>
+      </section>
+
+      <section class="card">
+        <h2>Option 2 - Embed the source page in an iframe</h2>
+        <div class="toolbar">
+          <button class="primary" id="loadFrameBtn">Load iframe</button>
+          <a class="link-btn secondary" href="https://partspriority.linfoxag.com/" target="_blank" rel="noopener noreferrer">Open source in new tab</a>
+        </div>
+        <div class="status info" id="frameStatus">Ready. Click “Load iframe” to test whether the source page allows embedding.</div>
+        <iframe id="sourceFrame" title="Parts Priority iframe test"></iframe>
+        <div class="small">
+          If the iframe stays blank or errors, the source page is likely blocking framing via browser security headers.
+        </div>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:14px;">
+      <h2>How to use this with your dashboards</h2>
+      <div class="inline">
+        <p>1. Host this HTML file on GitHub Pages.</p>
+        <p>2. Test whether the direct fetch works from your environment.</p>
+        <p>3. If direct fetch works, copy the same table-pull code into your dashboard and map the columns.</p>
+        <p>4. If only the iframe works, you can visually embed the page, but you generally will not be able to read the iframe contents from JavaScript because of browser same-origin restrictions.</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const SOURCE_URL = 'https://partspriority.linfoxag.com/';
+    const CORS_PROXY_HINT = '';
+
+    const fetchStatus = document.getElementById('fetchStatus');
+    const frameStatus = document.getElementById('frameStatus');
+    const tableWrap = document.getElementById('tableWrap');
+    const sourceFrame = document.getElementById('sourceFrame');
+    const downloadCsvBtn = document.getElementById('downloadCsvBtn');
+    const fetchDebug = document.getElementById('fetchDebug');
+
+    let pulledTable = null;
+
+    function setStatus(el, type, text) {
+      el.className = `status ${type}`;
+      el.textContent = text;
+    }
+
+    function tableToCsv(tableEl) {
+      const rows = [...tableEl.querySelectorAll('tr')];
+      return rows.map(row => {
+        const cells = [...row.querySelectorAll('th, td')];
+        return cells.map(cell => {
+          const text = (cell.innerText || cell.textContent || '').replace(/\r?\n|\r/g, ' ').trim();
+          const escaped = text.replace(/"/g, '""');
+          return `"${escaped}"`;
+        }).join(',');
+      }).join('\n');
+    }
+
+    function downloadText(filename, content, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function pullTable() {
+      setStatus(fetchStatus, 'info', 'Attempting browser-side fetch...');
+      fetchDebug.textContent = 'Fetching ' + SOURCE_URL;
+      tableWrap.innerHTML = '';
+      downloadCsvBtn.disabled = true;
+      pulledTable = null;
+
+      try {
+        const response = await fetch(SOURCE_URL, {
+          method: 'GET',
+          credentials: 'omit'
+        });
+
+        fetchDebug.textContent = [
+          'Fetch completed.',
+          'Status: ' + response.status,
+          'OK: ' + response.ok,
+          'Type: ' + response.type,
+          'URL: ' + response.url
+        ].join('\n');
+
+        if (!response.ok) {
+          throw new Error('HTTP ' + response.status + ' returned from source page.');
+        }
+
+        const html = await response.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const table = doc.querySelector('table');
+
+        if (!table) {
+          setStatus(fetchStatus, 'warn', 'Fetch worked, but no <table> element was found in the returned HTML. The page may be JavaScript-rendered.');
+          fetchDebug.textContent += '\n\nNo table element found in returned HTML.';
+          return;
+        }
+
+        pulledTable = table.cloneNode(true);
+        tableWrap.appendChild(pulledTable);
+        downloadCsvBtn.disabled = false;
+        setStatus(fetchStatus, 'good', 'Success. The table was pulled into this page and can now be downloaded as CSV.');
+      } catch (error) {
+        setStatus(fetchStatus, 'bad', 'Direct browser fetch failed. This usually means CORS or another browser restriction is blocking access from your hosted page.');
+        fetchDebug.textContent += '\n\nError: ' + (error && error.message ? error.message : String(error));
+      }
+    }
+
+    function loadFrame() {
+      setStatus(frameStatus, 'info', 'Loading iframe...');
+      sourceFrame.src = SOURCE_URL;
+
+      let resolved = false;
+
+      const timeout = setTimeout(() => {
+        if (!resolved) {
+          setStatus(frameStatus, 'warn', 'The iframe did not confirm a clean load. Check visually whether the site appears, or whether the browser blocks framing.');
+        }
+      }, 5000);
+
+      sourceFrame.onload = () => {
+        resolved = true;
+        clearTimeout(timeout);
+        setStatus(frameStatus, 'good', 'Iframe load event fired. If you can see the source page below, the site likely allows framing.');
+      };
+    }
+
+    document.getElementById('pullTableBtn').addEventListener('click', pullTable);
+    document.getElementById('loadFrameBtn').addEventListener('click', loadFrame);
+    document.getElementById('clearTableBtn').addEventListener('click', () => {
+      tableWrap.innerHTML = '';
+      pulledTable = null;
+      downloadCsvBtn.disabled = true;
+      setStatus(fetchStatus, 'info', 'Cleared. Ready for another fetch test.');
+      fetchDebug.textContent = 'Cleared previous result.';
+    });
+
+    downloadCsvBtn.addEventListener('click', () => {
+      if (!pulledTable) return;
+      const csv = tableToCsv(pulledTable);
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+      downloadText(`partspriority_${stamp}.csv`, csv, 'text/csv;charset=utf-8;');
+    });
+  </script>
+</body>
+</html>
