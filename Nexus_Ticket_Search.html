@@ -1,0 +1,2207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Nexus Ticket Search</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<style>
+
+:root {
+  --bg1:#f4f7fb;
+  --bg2:#ffffff;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --border:#dbe3ef;
+  --accent:#1d4ed8;
+  --accent-2:#0f766e;
+  --warn:#b45309;
+  --bad:#b91c1c;
+  --ok:#166534;
+  --chip:#eef2ff;
+  --shadow:0 10px 28px rgba(15,23,42,.08);
+  --radius:18px;
+  --chart-height:300px;
+
+  /* PRINT CONTROLS */
+  --print-widget-width: 88px;
+  --print-widget-height: 40px;
+  --print-chart-height: 300px;
+  --print-page-margin: 8mm;
+  --print-page-height-px: 1060;
+  --dynamic-print-chart-height: 400px;
+  --print-charts-per-row: 2;
+  --print-chart-gap: 6px;
+  --print-chart-max-height: 155px;
+  --print-table-font-size: 8.5px;
+  --print-col-age-width: 5%;
+  --print-col-ticketid-width: 7%;
+  --print-col-customer-width: 8%;
+  --print-col-progress-width: 7%;
+  --print-col-region-width: 5%;
+  --print-col-state-width: 4%;
+  --print-col-service-width: 7%;
+  --print-col-severity-width: 7%;
+  --print-col-cause-width: 7%;
+  --print-col-nexteta-width: 7%;
+  --print-col-etastatus-width: 7%;
+  --print-col-bu-width: 7%;
+  --print-col-comments-width: 35%;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0;
+  font-family: Arial, Helvetica, sans-serif;
+  color:var(--text);
+  background:linear-gradient(180deg,var(--bg1) 0%, var(--bg2) 46%);
+}
+.container {
+  width:min(100%, calc(100% - 24px));
+  margin:12px auto 24px;
+}
+.header {
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+  margin-bottom:12px;
+}
+.title-wrap {
+  background:transparent;
+  border:none;
+  border-radius:0;
+  padding:4px 0 6px;
+  box-shadow:none;
+  flex:1;
+}
+.title-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.title-main {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.about-button-wrap {
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+}
+.about-button-wrap .info-button {
+  --badge-width: 90px;
+  --badge-height: 28px;
+  --badge-radius: 6px;
+  --badge-fill: #ffffff;
+  --badge-text: #000000;
+  --badge-grad-start: #ff2bd6;
+  --badge-grad-mid: #7d4bff;
+  --badge-grad-end: #1e7cff;
+  --tooltip-width: 400px;
+  --tooltip-bg: linear-gradient(
+    135deg,
+    rgba(255, 43, 214, 0.08),
+    rgba(125, 75, 255, 0.08) 45%,
+    rgba(30, 124, 255, 0.08)
+  );
+  --tooltip-text: #000000;
+  --tooltip-border: rgba(0,0,0,.15);
+  --tooltip-radius: 10px;
+  --tooltip-shadow: 0 16px 36px rgba(0,0,0,.45);
+  width: var(--badge-width);
+  height: var(--badge-height);
+  border-radius: var(--badge-radius);
+  border: 2px solid transparent;
+  cursor: pointer;
+  position: relative;
+  background:
+    linear-gradient(var(--badge-fill), var(--badge-fill)) padding-box,
+    linear-gradient(135deg, var(--badge-grad-start), var(--badge-grad-mid) 45%, var(--badge-grad-end)) border-box;
+  color: var(--badge-text);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
+  padding: 0;
+}
+.about-button-wrap .tooltip {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  width: var(--tooltip-width);
+  padding: 12px 14px;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  font-size: 12px;
+  line-height: 1.4;
+  border-radius: var(--tooltip-radius);
+  border: 1px solid var(--tooltip-border);
+  box-shadow: var(--tooltip-shadow);
+  white-space: normal;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transition: opacity .25s ease, transform .25s ease;
+}
+.about-button-wrap .tooltip::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  background: var(--tooltip-bg);
+  transform: translateX(-50%) rotate(45deg);
+  border-left: 1px solid var(--tooltip-border);
+  border-top: 1px solid var(--tooltip-border);
+}
+.about-button-wrap .info-button:hover .tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.pill.oldest-ticket-pill {
+  background:#dcfce7;
+  border-color:#bbf7d0;
+  color:#166534;
+  font-weight:700;
+}
+h1 {
+  margin:0 0 6px;
+  font-size:28px;
+}
+.sub {
+  color:var(--muted);
+  font-size:14px;
+}
+.actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  justify-content:flex-end;
+}
+button, .file-label, select, input[type="text"], input[type="password"] {
+  font:inherit;
+}
+button, .file-label {
+  border:1px solid var(--border);
+  background:#fff;
+  color:var(--text);
+  border-radius:12px;
+  padding:10px 14px;
+  cursor:pointer;
+  box-shadow:var(--shadow);
+}
+button.primary { background:var(--accent); color:#fff; border-color:transparent; }
+button.ghost { background:#fff; }
+button.small { padding:6px 10px; border-radius:10px; box-shadow:none; }
+.file-label input { display:none; }
+.panel, .card {
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+}
+.filters {
+  padding:14px;
+  margin-bottom:12px;
+}
+.filters-grid {
+  display:grid;
+  grid-template-columns: repeat(7, minmax(150px, 1fr));
+  gap:10px;
+}
+.filter-group label {
+  display:block;
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:4px;
+}
+.filter-group select, .filter-group input {
+  width:100%;
+  padding:9px 10px;
+  border:1px solid var(--border);
+  border-radius:10px;
+  background:#fff;
+}
+.widgets {
+  display:grid;
+  grid-template-columns: repeat(auto-fit, 168px);
+  justify-content:center;
+  gap:12px;
+  margin-bottom:12px;
+}
+.widget {
+  padding:16px;
+  min-height:108px;
+}
+.widget h3 {
+  margin:0 0 8px;
+  color:var(--muted);
+  font-size:13px;
+  font-weight:700;
+  letter-spacing:.02em;
+  text-transform:uppercase;
+  text-align:center;
+}
+.widget .value {
+  font-size:40px;
+  font-weight:700;
+  line-height:1.05;
+  text-align:center;
+}
+.widget .meta {
+  margin-top:6px;
+  font-size:12px;
+  color:var(--muted);
+  text-align:center;
+}
+.grid {
+  display:grid;
+  grid-template-columns: repeat(6, minmax(220px, 1fr));
+  gap:12px;
+  margin-bottom:12px;
+}
+.chart-card {
+  padding:8px 8px 6px;
+  min-height:calc(var(--chart-height, 290px) + 70px);
+}
+.chart-card h2 {
+  margin:2px 0 4px;
+  font-size:18px;
+  text-align:center;
+}
+.widget.filterable { cursor:pointer; transition:background .18s ease, border-color .18s ease, transform .18s ease; }
+.widget.filterable:hover { transform:translateY(-1px); }
+.widget.active-filter { background:#dcfce7; border-color:#22c55e; }
+.priority-toggle { display:grid; grid-template-columns:repeat(2, max-content); align-items:center; justify-content:flex-start; gap:8px 14px; padding:0; border:none; border-radius:0; background:transparent; min-height:38px; box-shadow:none; }
+.checkbox-inline { display:inline-flex; align-items:center; gap:6px; margin:0; white-space:nowrap; line-height:1; }
+.checkbox-inline span { display:flex; line-height:1.1; }
+.checkbox-inline input { margin:0; flex:0 0 auto; }
+.icon-label { display:inline-flex; align-items:center; gap:8px; }
+.icon-img { width:18px; height:18px; display:block; object-fit:contain; }
+.icon-img.greenish { filter:hue-rotate(70deg) saturate(180%) brightness(0.95); }
+.icon-img.redish { filter:hue-rotate(310deg) saturate(180%) brightness(0.95); }
+.priority-sections { display:grid; gap:14px; }
+.priority-section { border:1px solid var(--border); border-radius:14px; padding:12px; }
+.priority-section h3 { margin:0 0 8px; font-size:15px; }
+.priority-section .check-list { margin-top:0; }
+.chart-wrap {
+  position:relative;
+  height:var(--chart-height, 290px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.chart-wrap canvas {
+  max-width:100% !important;
+  max-height:100% !important;
+  width:auto !important;
+  height:100% !important;
+  margin:0 auto !important;
+}
+.table-card {
+  padding:0;
+  border:none;
+  box-shadow:none;
+  background:transparent;
+}
+.table-top {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:10px;
+}
+.legend-note {
+  font-size:12px;
+  color:var(--muted);
+}
+.table-scroll {
+  overflow:auto;
+  max-height:70vh;
+  border:1px solid var(--border);
+  border-radius:14px;
+}
+table {
+  width:100%;
+  border-collapse:collapse;
+  min-width:1600px;
+}
+thead th {
+  position:sticky;
+  top:0;
+  background:#eff6ff;
+  z-index:2;
+  text-align:left;
+  font-size:12px;
+  letter-spacing:.02em;
+  color:#1e3a8a;
+}
+th, td {
+  padding:5px 6px;
+  border-bottom:1px solid #edf2f7;
+  vertical-align:top;
+  font-size:12px;
+}
+tbody tr:hover {
+  background:#f8fbff;
+}
+tbody tr.row-complete-secondary {
+  background:#dcfce7;
+}
+tbody tr.row-complete-secondary:hover {
+  background:#bbf7d0;
+}
+tbody tr.row-future-eta-long {
+  background:#fef3c7;
+}
+tbody tr.row-future-eta-long:hover {
+  background:#fde68a;
+}
+.overwrite-note {
+  display:block;
+  margin-top:4px;
+  font-size:11px;
+  line-height:1.25;
+  color:var(--muted);
+}
+td .desc {
+  display:block;
+  color:var(--muted);
+  margin-top:4px;
+  line-height:1.35;
+}
+.badge {
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:999px;
+  background:var(--chip);
+  font-size:12px;
+  white-space:nowrap;
+}
+.badge.follow { background:#fef3c7; color:#92400e; }
+.badge.expired { background:#fee2e2; color:#991b1b; }
+.badge.future { background:#dcfce7; color:#166534; }
+.tag-input {
+  width:260px;
+  min-width:260px;
+  padding:7px 8px;
+  border:1px solid var(--border);
+  border-radius:9px;
+}
+.admin-panel {
+  display:none;
+  margin-bottom:12px;
+  padding:14px;
+}
+.admin-panel.active { display:block; }
+.admin-grid {
+  display:grid;
+  grid-template-columns: 1.2fr .8fr;
+  gap:14px;
+}
+.check-list {
+  display:grid;
+  grid-template-columns:repeat(2, minmax(180px, 1fr));
+  gap:8px 16px;
+  margin-top:10px;
+}
+.check-list label {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:14px;
+}
+.small-note {
+  font-size:12px;
+  color:var(--muted);
+}
+.status-line {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin-top:8px;
+}
+.pill {
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#f8fafc;
+  border:1px solid var(--border);
+  font-size:12px;
+}
+.hidden { display:none !important; }
+
+.print-summary {
+  display:none;
+  padding:10px 14px;
+  margin:0 0 12px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:#fff;
+  font-size:13px;
+}
+.icon-btn {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-width:44px;
+}
+.icon-btn svg {
+  width:18px;
+  height:18px;
+  display:block;
+}
+.print-only { display:none !important; }
+.screen-only { display:initial; }
+.print-summary {
+  margin-top:8px;
+  font-size:13px;
+  color:var(--muted);
+}
+.status-line { display:none; }
+.title-wrap .sub { display:none; }
+
+
+  @page {
+    margin: var(--print-page-margin);
+  }
+
+  @media print and (orientation: portrait) {
+    .widgets {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      gap: 6px !important;
+      width: 100% !important;
+      justify-content: stretch !important;
+    }
+    .widget {
+      width: auto !important;
+      min-width: 0 !important;
+    }
+  }
+
+  @media print {
+  html, body {
+    height:auto !important;
+    overflow:visible !important;
+  }
+  body {
+    margin: var(--print-page-margin);
+    background:#fff !important;
+    padding:0 !important;
+  }
+  .screen-only, .actions, .filters, .admin-panel, .table-actions, .status-line, .legend-note, .file-label, button, .desc, .about-button-wrap {
+    display:none !important;
+  }
+  .print-only {
+    display:inline !important;
+  }
+  .container {
+    width:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+    height:auto !important;
+    overflow:visible !important;
+  }
+  .header {
+    display:block;
+    margin-bottom:6px;
+  }
+  .title-wrap {
+    padding:0 !important;
+    margin:0 0 6px 0 !important;
+  }
+  .title-head {
+    gap:8px;
+    margin-bottom:0;
+  }
+  h1 { font-size:22px; margin:0; }
+  .oldest-ticket-pill {
+    padding:4px 8px;
+    font-size:11px;
+  }
+  .print-summary {
+    display:block !important;
+    margin-top:2px !important;
+    padding:2px 0 !important;
+    font-size:11px !important;
+    border:none !important;
+    background:transparent !important;
+  }
+  .widgets {
+    display:grid !important;
+    grid-template-columns: repeat(9, minmax(0, 1fr)) !important;
+    width:100% !important;
+    justify-content:stretch !important;
+    gap:4px !important;
+    margin-bottom:5px !important;
+  }
+  .widget {
+    min-height:var(--print-widget-height) !important;
+    height:var(--print-widget-height) !important;
+    padding:4px 3px 3px !important;
+    box-shadow:none !important;
+    border:1px solid #cbd5e1 !important;
+    border-radius:12px !important;
+    background:#fff !important;
+    break-inside:avoid;
+    page-break-inside:avoid;
+    display:flex !important;
+    flex-direction:column !important;
+    justify-content:space-between !important;
+    align-items:center !important;
+  }
+  .widget h3 {
+    width:100% !important;
+    font-size:7.5px !important;
+    line-height:1.0 !important;
+    margin:0 !important;
+    text-align:center !important;
+    align-self:center !important;
+  }
+  .widget .value {
+    font-size:18px !important;
+    margin-top:auto !important;
+    text-align:center !important;
+  }
+  .widget .meta { display:none !important; }
+  .grid {
+    display:grid !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    grid-template-columns: repeat(var(--print-charts-per-row), minmax(0, 1fr)) !important;
+    gap: var(--print-chart-gap) !important;
+    margin-bottom:2px !important;
+    align-items:start !important;
+    break-after: avoid-page !important;
+    page-break-after: avoid !important;
+  }
+  .chart-card {
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    width:100% !important;
+    min-height:auto !important;
+    height:auto !important;
+    padding:2px 0 1px !important;
+    box-shadow:none !important;
+    border:none !important;
+    background:transparent !important;
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+  .chart-card h2 {
+    font-size:9px !important;
+    line-height:1 !important;
+    margin:0 0 1px 0 !important;
+    text-align:center !important;
+  }
+  .chart-wrap {
+    width:100% !important;
+    aspect-ratio: 1.8 / 1;
+  height:auto !important;
+  min-height:0 !important;
+    max-height:none !important;
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    overflow:visible !important;
+  }
+  .chart-wrap canvas {
+    display:block !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    width:100% !important;
+    height:100% !important;
+    max-width:100% !important;
+    max-height:100% !important;
+    aspect-ratio:auto !important;
+    margin:0 auto !important;
+  }
+  .table-card {
+    break-before:auto !important;
+    page-break-before:auto !important;
+    break-after:auto !important;
+    page-break-after:auto !important;
+    padding:0 !important;
+    margin:0 !important;
+    box-shadow:none !important;
+    border:none !important;
+    background:transparent !important;
+    height:auto !important;
+    max-height:none !important;
+    overflow:visible !important;
+  }
+  .summary-grid + .table-card {
+    break-before:page !important;
+    page-break-before:always !important;
+  }
+  .table-top {
+    display:block !important;
+    margin-bottom:4px !important;
+  }
+  .table-top h2 {
+    margin:0 0 2px 0 !important;
+    font-size:14px !important;
+  }
+  .table-scroll {
+    overflow:visible !important;
+    max-height:none !important;
+    height:auto !important;
+    border:none !important;
+    border-radius:0 !important;
+    margin:0 !important;
+    padding:0 !important;
+  }
+  table { min-width:0 !important; width:100% !important; table-layout:fixed !important; height:auto !important; margin:0 !important; break-after:auto !important; page-break-after:auto !important; }
+  thead th {
+    position:static !important;
+    background:#fff !important;
+    color:#000 !important;
+    font-size:var(--print-table-font-size) !important;
+    padding:4px 3px !important;
+  }
+  th, td {
+    font-size:var(--print-table-font-size) !important;
+    padding:3px 3px !important;
+    border:1px solid #bbb !important;
+    vertical-align:top !important;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+    break-inside:avoid-page !important;
+    page-break-inside:avoid !important;
+  }
+  thead, tbody, tr { break-inside:auto !important; page-break-inside:auto !important; }
+  .container > :last-child, .table-card:last-child, .table-scroll:last-child, table:last-child { margin-bottom:0 !important; padding-bottom:0 !important; }
+  .summary-grid,
+  .summary-card,
+  .summary-table-scroll,
+  .summary-report-table,
+  .table-scroll,
+  #ticketsTable,
+  #ticketsTable tbody,
+  #ticketsTable tr:last-child,
+  .container > :last-child {
+    break-after:auto !important;
+    page-break-after:auto !important;
+  }
+  .grid .chart-card { display:none !important; }
+  .grid .chart-card.print-keep { display:block !important; }
+  .summary-grid { display:none !important; }
+  .badge, .follow, .expired, .future, .pill { all:unset; display:inline !important; }
+  * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+}
+
+@media (max-width:1400px) {
+  .filters-grid { grid-template-columns: repeat(4, minmax(150px,1fr)); }
+  .widgets { grid-template-columns: repeat(3, minmax(160px,1fr)); }
+  .grid { grid-template-columns: repeat(2, minmax(260px,1fr)); }
+  .summary-grid { grid-template-columns: repeat(2, minmax(260px,1fr)); }
+}
+@media (max-width:900px) {
+  .header { flex-direction:column; }
+  .filters-grid, .widgets, .grid, .admin-grid { grid-template-columns:1fr; }
+}
+
+
+.json-input { display:none; }
+.table-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.table-actions .hint { font-size:12px; color:var(--muted); }
+.bu-input, .tag-input {
+  width:100%; padding:8px 10px; border:1px solid var(--border); border-radius:10px; font:inherit; background:#fff;
+}
+.widget .meta strong { color:var(--text); }
+.filter-inline-row { display:flex; align-items:center; gap:8px; }
+.filter-inline-row select { flex:1; min-width:0; }
+.bu-filter-group { grid-column: span 2; }
+.icon-only-btn { min-width:38px; width:38px; height:34px; padding:0; display:inline-flex; align-items:center; justify-content:center; background:#dcfce7; border-color:#bbf7d0; font-size:17px; line-height:1; }
+.filter-inline-row .include-projects-inline { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; font-size:12px; color:var(--text); font-weight:600; margin-bottom:0; }
+.filter-inline-row .include-projects-inline input { margin:0; }
+.badge.ancient { background:#fee2e2; color:#991b1b; font-weight:700; }
+.summary-grid {
+  display:grid;
+  grid-template-columns: repeat(4, minmax(260px, 1fr));
+  gap:12px;
+  margin-bottom:12px;
+  align-items:start;
+}
+.summary-card {
+  padding:12px 14px 10px;
+  break-inside:avoid;
+  page-break-inside:avoid;
+}
+.summary-card h2 {
+  margin:2px 0 10px;
+  font-size:18px;
+}
+.summary-table {
+  width:100%;
+  min-width:0;
+  border-collapse:collapse;
+}
+.summary-table th, .summary-table td {
+  padding:5px 6px;
+  font-size:12px;
+  border-bottom:1px solid #edf2f7;
+  vertical-align:top;
+}
+.summary-table th {
+  background:#eff6ff;
+  color:#1e3a8a;
+  text-align:left;
+}
+.ticket-tooltip-placeholder { cursor:default; }
+
+.summary-table-scroll {
+  overflow:auto;
+  max-height:70vh;
+  border:1px solid var(--border);
+  border-radius:14px;
+}
+.summary-report-table {
+  width:100%;
+  border-collapse:collapse;
+  min-width:780px;
+}
+.summary-report-table thead th {
+  position:sticky;
+  top:0;
+  background:#eff6ff;
+  z-index:2;
+  text-align:left;
+  font-size:12px;
+  letter-spacing:.02em;
+  color:#1e3a8a;
+}
+.summary-report-table th, .summary-report-table td {
+  padding:5px 6px;
+  border-bottom:1px solid #edf2f7;
+  vertical-align:top;
+  font-size:12px;
+}
+@media print {
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    break-inside:avoid !important;
+    page-break-inside:avoid !important;
+  }
+  .summary-card {
+    break-inside:avoid !important;
+    page-break-inside:avoid !important;
+  }
+  .summary-table-scroll {
+    overflow:visible !important;
+    max-height:none !important;
+    border:none !important;
+    border-radius:0 !important;
+  }
+  .summary-report-table {
+    min-width:0 !important;
+    width:100% !important;
+    table-layout:fixed !important;
+  }
+  .summary-report-table thead th {
+    position:static !important;
+    background:#fff !important;
+    color:#000 !important;
+    font-size:var(--print-table-font-size) !important;
+    padding:4px 3px !important;
+  }
+  .summary-report-table th, .summary-report-table td {
+    font-size:var(--print-table-font-size) !important;
+    padding:3px 3px !important;
+    border:1px solid #bbb !important;
+    vertical-align:top !important;
+    overflow-wrap:anywhere;
+    word-break:break-word;
+  }
+}
+
+
+.nexus-diamond {
+  width: 16px;
+  height: 16px;
+  background: #1f2f66;
+  display: inline-block;
+  position: relative;
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+
+.nexus-diamond::before,
+.nexus-diamond::after {
+  content: "";
+  position: absolute;
+  background: #ffffff;
+}
+
+.nexus-diamond::before {
+  width: 2px;
+  height: 100%;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+}
+
+.nexus-diamond::after {
+  height: 2px;
+  width: 100%;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+}
+
+.json-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.json-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  letter-spacing: 0.3px;
+}
+
+.json-green {
+  color: #166534;
+}
+
+.json-red {
+  color: #b91c1c;
+}
+
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="title-wrap">
+      <div class="title-head">
+        <div class="title-main">
+          <h1>Nexus Ticket Search</h1>
+          <div class="about-button-wrap">
+            <button class="info-button" type="button" aria-label="Description" aria-describedby="description-tooltip">
+              About
+              <div id="description-tooltip" class="tooltip">
+                <div>The purpose of this dashboard is to provide a consistent, fully customisable reporting tool for the anyone who uses Nexus Ticket Search.</div>
+                <div>This dashboard is completely customisable, and secure as it doesn't hold any sensitive data. It comes to life after data is imported, and stays on the local PC.</div>
+              </div>
+            </button>
+          </div>
+        </div>
+        <span class="pill oldest-ticket-pill" id="oldestTicketPill">Oldest Ticket: --/--/----</span>
+      </div>
+      <div id="printSummary" class="print-summary">Filters Applied: None</div>
+      <div class="status-line" hidden>
+        <span class="pill" id="nexusStatus">Nexus data loaded: embedded sample</span>
+        <span class="pill" id="progressStatus">Progress JSON: not loaded</span>
+        <span class="pill" id="adminState">Admin mode: off</span>
+      </div>
+    </div>
+    <div class="actions">
+<!-- Nexus Import Button-->
+      <label class="file-label">Import Nexus
+        <span class="nexus-diamond" aria-hidden="true"></span>
+        <input type="file" id="nexusFile" accept=".xlsx,.xls,.csv" />
+      </label>
+
+<!-- Green {JSON} Import -->
+      <label class="file-label icon-label json-action">
+        <span class="json-badge json-green">{JSON}</span>
+        Import
+        <input type="file" id="progressFile" class="json-input" accept=".json" />
+      </label>
+
+<!-- Red {JSON} Export -->
+      <button id="exportProgressBtn"
+              class="file-label icon-label"
+              type="button"
+              style="display:inline-flex;align-items:center;gap:10px;font-weight:600;cursor:pointer;">
+        <span class="json-badge json-red">{JSON}</span>
+        Export
+      </button>
+
+<!-- Print Button -->
+      <button id="printBtn" class="ghost icon-btn" title="Print" aria-label="Print">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path fill="currentColor" d="M7 8V3h10v5H7zm8-3H9v3h6V5zM6 18h12v3H6v-3zm13-8H5a3 3 0 0 0-3 3v4h4v-3h12v3h4v-4a3 3 0 0 0-3-3zm-1 5H6v-3h12v3z"/>
+        </svg>
+      </button>
+
+<!-- Map Button -->
+      <button id="openMapBtn" class="ghost icon-btn" title="Ticket map" aria-label="Ticket map">
+        <img class="icon-img" src="https://cdn-icons-png.flaticon.com/512/297/297051.png" alt="" />
+      </button>
+
+      <button id="adminBtn" class="ghost">Admin Mode</button>
+    </div>
+  </div>
+
+  <div id="adminPanel" class="panel admin-panel">
+    <h2 style="margin:0 0 6px;">Admin settings</h2>
+    <div class="small-note">Priority Ticket rules and Business Unit options can be edited directly. Use Export Progress JSON after making changes so the rule can be shared with the next user.</div>
+    <div id="adminControls" style="margin-top:12px;">
+      <div class="admin-grid">
+        <div>
+          <strong>Priority Ticket rules</strong>
+          <div class="small-note" style="margin:10px 0 8px;">Select the values that should count as a Priority Ticket. A ticket must match all populated field groups below.</div>
+          <div id="priorityRulesContainer" class="priority-sections"></div>
+        </div>
+        <div>
+          <strong>Current Priority rule</strong>
+          <div class="small-note" style="margin:10px 0 8px;">The selected values below define which tickets are treated as Priority Tickets when the checkbox filter is turned on.</div>
+          <div id="selectedPrioritySummary" class="panel" style="padding:12px; min-height:120px;"></div>
+          <div style="margin-top:14px;">
+            <strong>Business Unit options</strong>
+            <div class="small-note" style="margin:10px 0 8px;">One BU per line. These options feed both the BU filter and the row dropdown list.</div>
+            <textarea id="buListEditor" style="width:100%; min-height:120px; padding:10px; border:1px solid var(--line); border-radius:12px; font:inherit; resize:vertical;"></textarea>
+          </div>
+          <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button id="saveAdminBtn" class="primary">Save Admin Settings</button>
+            <button id="lockAdminBtn" class="ghost">Lock Admin</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="card panel filters" style="margin-bottom:14px;">
+    <div class="filters-grid">
+      <div class="filter-group"><label>Search</label><input type="text" id="searchInput" placeholder="Ticket, customer, site, address..." /></div>
+      <div class="filter-group"><label>State</label><select id="stateFilter"></select></div>
+      <div class="filter-group"><label>Customer</label><select id="customerFilter"></select></div>
+      <div class="filter-group"><label>Parent Customer</label><select id="parentCustomerFilter"></select></div>
+      <div class="filter-group"><label>Ticket Progress</label><select id="progressFilter"></select></div>
+      <div class="filter-group"><label>Ticket Type</label><select id="ticketTypeFilter"></select></div>
+      <div class="filter-group"><label>Device Service / Sub Category</label><select id="serviceFilter"></select></div>
+      <div class="filter-group"><label>Assigned To</label><select id="assignedToFilter"></select></div>
+      <div class="filter-group"><label>Created By</label><select id="createdByFilter"></select></div>
+      <div class="filter-group"><label>Age Bucket</label><select id="ageFilter"></select></div>
+      <div class="filter-group"><label>ETA Status</label><select id="etaStatusFilter"></select></div>
+      <div class="filter-group"><label>Has Assignee</label><select id="assigneePresenceFilter"><option value="all">All</option><option value="yes">Has Assignee</option><option value="no">No Assignee</option></select></div>
+      <div class="filter-group"><label>Has Review Date</label><select id="reviewPresenceFilter"><option value="all">All</option><option value="yes">Has Review Date</option><option value="no">No Review Date</option></select></div>
+      <div class="filter-group"><label>Ancient</label><select id="ancientFilter"><option value="all">All</option><option value="yes">Yes</option><option value="no">No</option></select></div>
+      <div class="filter-group bu-filter-group"><label>Responsible BU</label><div class="filter-inline-row"><select id="buFilter"></select><button id="emailBtn" class="ghost icon-only-btn" type="button" title="Open BU Email" aria-label="Open BU Email">✉</button><label class="include-projects-inline"><input type="checkbox" id="includeProjectsToggle" /> <span>Include Projects</span></label><label class="include-projects-inline"><input type="checkbox" id="createdTodayToggle" /> <span>Created Today</span></label></div></div>
+      <div class="filter-group"><label>&nbsp;</label><button id="clearFiltersBtn" class="ghost icon-only-btn" style="width:100%;" title="Reset filters" aria-label="Reset filters">↺</button></div>
+    </div>
+  </div>
+
+  <div class="widgets" id="widgets"></div>
+
+  <div class="grid">
+    <div class="card chart-card print-keep"><h2>Ageing Buckets</h2><div class="chart-wrap"><canvas id="ageChart"></canvas></div></div>
+    <div class="card chart-card print-keep"><h2>Age by Customer</h2><div class="chart-wrap"><canvas id="ageByCustomerChart"></canvas></div></div>
+    <div class="card chart-card print-keep"><h2>State</h2><div class="chart-wrap"><canvas id="stateChart"></canvas></div></div>
+    <div class="card chart-card"><h2>Top Cities</h2><div class="chart-wrap"><canvas id="cityChart"></canvas></div></div>
+    <div class="card chart-card"><h2>Customer</h2><div class="chart-wrap"><canvas id="customerChart"></canvas></div></div>
+    <div class="card chart-card"><h2>Ticket Type</h2><div class="chart-wrap"><canvas id="ticketTypeChart"></canvas></div></div>
+    <div class="card chart-card"><h2>Device Service / Sub Category</h2><div class="chart-wrap"><canvas id="serviceChart"></canvas></div></div>
+    <div class="card chart-card"><h2>Model</h2><div class="chart-wrap"><canvas id="modelChart"></canvas></div></div>
+    <div class="card chart-card print-keep"><h2>Responsible BU</h2><div class="chart-wrap"><canvas id="buChart"></canvas></div></div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="card summary-card"><h2>State × Ticket Progress</h2><div id="stateProgressMatrix"></div></div>
+    <div class="card summary-card"><h2>Customer × Ageing</h2><div id="customerAgeTable"></div></div>
+    <div class="card summary-card"><h2>Customer × No ETA / No Assignee</h2><div id="customerExceptionTable"></div></div>
+    <div class="card summary-card"><h2>Device Service × Ageing</h2><div id="serviceAgeTable"></div></div>
+  </div>
+
+  <div class="card table-card">
+    <div class="table-top">
+      <div>
+        <h2 style="margin:0 0 4px;">Backlog tickets</h2>
+              </div>
+      <div>
+        <div class="legend-note" id="rowCountLabel"></div>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table id="ticketsTable">
+        <thead>
+          <tr>
+            <th>Age</th>
+            <th>Created Date</th>
+            <th>Ticket Number</th>
+            <th>Device ID</th>
+            <th>Model</th>
+            <th>Serial No.</th>
+            <th>Next ETA</th>
+            <th>ETA Status</th>
+            <th>Review Date</th>
+            <th>Customer</th>
+            <th>Address</th>
+            <th>City</th>
+            <th>State</th>
+            <th>Postcode</th>
+            <th>Created By</th>
+            <th>Assigned To</th>
+            <th>Ticket Progress</th>
+            <th>Ticket Type</th>
+            <th>Dev. Service</th>
+            <th>Site Name</th>
+            <th>Responsible BU</th>
+            <th>Comments</th>
+          </tr>
+        </thead>
+        <tbody id="ticketTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+const EMBEDDED_PRIMARY = [{"Customer": "Customer 1", "Created Date": "2026-04-01 00:00:00", "Created Time": "16:27:01", "Ticket Status": "Incomplete", "Ticket Progress Status": "Unallocated", "Ticket ID": 4455667, "Customer Reference": "Test Ticket", "Device Code": 123456, "Model": "Test Model", "Region": "Country", "Address": "21 Jump St, Sydney", "Postcode": "3070", "Device State": "VIC", "Device Service": "SLM", "Severity Type": "Not Functioning", "Description": "Assign this ticket to the CMC. They need to followup with the tech", "Cause": "Project", "Billing Code": null, "Response Hours": null, "Clocked Restore Hours": null, "On Site Date": null, "On Site Time": null, "Tech Last Depart Date": "2026-02-19 00:00:00", "Tech Last Depart Time": "16:15:00", "Completed Date": null, "Last Work Performed": "Sample - Last Work Performed", "Last Ticket Activity": "ETA Provided", "Resolution": "Dispenser", "Sub Resolution": "Investigated", "Time On Site Hours": 5.45, "Ticket Completed Date": null, "Service Type": "Non Maintenance", "Total Site Visits": 1, "Total Parts Used Trackable": null, "Total Parts Used Consumable": null, "Total Travel Time Mins": null, "Serial No": "5310096014", "Comments": null}, {"Customer": "Customer 2", "Created Date": "2026-04-01 00:00:00", "Created Time": "13:37:56", "Ticket Status": "Incomplete", "Ticket Progress Status": "Completed", "Ticket ID": 4455668, "Customer Reference": "Test Ticket", "Device Code": 123457, "Model": "Test Model", "Region": "Remote", "Address": "21 Jump St, Sydney", "Postcode": "5606", "Device State": "SA", "Device Service": "SLM", "Severity Type": "Functioning", "Description": "Assign this to Client Services. There is a task open", "Cause": "Cencon Key", "Billing Code": null, "Response Hours": null, "Clocked Restore Hours": null, "On Site Date": null, "On Site Time": null, "Tech Last Depart Date": "2026-02-19 00:00:00", "Tech Last Depart Time": "11:20:00", "Completed Date": null, "Last Work Performed": "Sample - Last Work Performed", "Last Ticket Activity": "ETA TBA. Waiting on staff availability", "Resolution": "Dispenser", "Sub Resolution": "Investigated", "Time On Site Hours": 4.75, "Ticket Completed Date": null, "Service Type": "Lock Work", "Total Site Visits": 1, "Total Parts Used Trackable": null, "Total Parts Used Consumable": null, "Total Travel Time Mins": null, "Serial No": "5310098486", "Comments": null}, {"Customer": "Customer 3", "Created Date": "2026-04-01 00:00:00", "Created Time": "14:07:18", "Ticket Status": "Incomplete", "Ticket Progress Status": "Completed", "Ticket ID": 4455669, "Customer Reference": "Test Ticket", "Device Code": 123458, "Model": "Test Model", "Region": "Country", "Address": "21 Jump St, Sydney", "Postcode": "2035", "Device State": "NSW", "Device Service": "SLM", "Severity Type": "Not Functioning", "Description": "Assign this to Client Services. There is a task open", "Cause": "Project", "Billing Code": null, "Response Hours": null, "Clocked Restore Hours": null, "On Site Date": null, "On Site Time": null, "Tech Last Depart Date": "2026-02-19 00:00:00", "Tech Last Depart Time": "16:15:00", "Completed Date": null, "Last Work Performed": "Sample - Last Work Performed", "Last Ticket Activity": "ETA Provided", "Resolution": "Dispenser", "Sub Resolution": "Investigated", "Time On Site Hours": 5.45, "Ticket Completed Date": null, "Service Type": "Non Maintenance", "Total Site Visits": 1, "Total Parts Used Trackable": null, "Total Parts Used Consumable": null, "Total Travel Time Mins": null, "Serial No": "5300832622", "Comments": null}, {"Customer": "Customer 4", "Created Date": "2026-04-01 00:00:00", "Created Time": "09:09:45", "Ticket Status": "Incomplete", "Ticket Progress Status": "Allocated", "Ticket ID": 4455670, "Customer Reference": "Test Ticket", "Device Code": 123459, "Model": "Test Model", "Region": "Remote", "Address": "21 Jump St, Sydney", "Postcode": "3525", "Device State": "VIC", "Device Service": "SLM", "Severity Type": "Partially Functioning", "Description": "Assign this to Client Services. There is a task open", "Cause": "CCDM Cheque Deposit", "Billing Code": null, "Response Hours": null, "Clocked Restore Hours": null, "On Site Date": "2026-02-19 00:00:00", "On Site Time": "11:25:00", "Tech Last Depart Date": "2026-02-19 00:00:00", "Tech Last Depart Time": "11:20:00", "Completed Date": null, "Last Work Performed": "Sample - Last Work Performed", "Last Ticket Activity": "Follow ups emails sent, ball is in MP/RC court now", "Resolution": "Dispenser", "Sub Resolution": "Investigated", "Time On Site Hours": 4.75, "Ticket Completed Date": null, "Service Type": "SLM", "Total Site Visits": 2, "Total Parts Used Trackable": 1, "Total Parts Used Consumable": 0, "Total Travel Time Mins": 150, "Serial No": "5310096226", "Comments": null}, {"Customer": "Customer 5", "Created Date": "2026-04-01 00:00:00", "Created Time": "09:12:40", "Ticket Status": "Incomplete", "Ticket Progress Status": "Allocated", "Ticket ID": 4455671, "Customer Reference": "Test Ticket", "Device Code": 123460, "Model": "Test Model", "Region": "Country", "Address": "21 Jump St, Sydney", "Postcode": "3260", "Device State": "VIC", "Device Service": "SLM", "Severity Type": "Not Functioning", "Description": "Assign to Mr Hill. The agent is not responding to calls and emails.", "Cause": "Card Reader", "Billing Code": null, "Response Hours": null, "Clocked Restore Hours": null, "On Site Date": "2026-03-11 00:00:00", "On Site Time": "09:45:00", "Tech Last Depart Date": "2026-03-11 00:00:00", "Tech Last Depart Time": "11:20:00", "Completed Date": null, "Last Work Performed": "Sample - Last Work Performed", "Last Ticket Activity": "Manual Email Sent", "Resolution": "Dispenser", "Sub Resolution": "Investigated", "Time On Site Hours": 4.75, "Ticket Completed Date": null, "Service Type": "SLM", "Total Site Visits": 4, "Total Parts Used Trackable": 1, "Total Parts Used Consumable": 0, "Total Travel Time Mins": 360, "Serial No": "5310092475", "Comments": null}, {"Customer": "Customer 1", "Created Date": "2026-04-01 00:00:00", "Created Time": "14:50:07", "Ticket Status": "Incomplete", "Ticket Progress Status": "Unallocated", "Ticket ID": 4455672, "Customer Reference": "Test Ticket", "Device Code": 123461, "Model": "Test Model", "Region": "Remote", "Address": "21 Jump St, Sydney", "Postcode": "2145", "Device State": "NSW", "Device Service": "SLM", "Severity Type": "Not Functioning", "Description": "Assign to CMC to close", "Cause": "Project", "Billing Code": null, "Response Hours": null, "Clocked Restore Hours": null, "On Site Date": null, "On Site Time": null, "Tech Last Depart Date": "2026-03-11 00:00:00", "Tech Last Depart Time": "11:20:00", "Completed Date": null, "Last Work Performed": "Sample - Last Work Performed", "Last Ticket Activity": "Sent to SLM", "Resolution": "Dispenser", "Sub Resolution": "Investigated", "Time On Site Hours": 5.45, "Ticket Completed Date": null, "Service Type": "Non Maintenance", "Total Site Visits": 1, "Total Parts Used Trackable": null, "Total Parts Used Consumable": null, "Total Travel Time Mins": null, "Serial No": "5310033741", "Comments": null}, {"Customer": "Customer 2", "Created Date": "2026-04-01 00:00:00", "Created Time": "10:06:09", "Ticket Status": "Incomplete", "Ticket Progress Status": "Allocated", "Ticket ID": 4455673, "Customer Reference": "Test Ticket", "Device Code": 123462, "Model": "Test Model", "Region": "Country", "Address": "21 Jump St, Sydney", "Postcode": "3280", "Device State": "VIC", "Device Service": "SLM", "Severity Type": "Not Functioning", "Description": "Assign to CMC to close", "Cause": "Dispenser", "Billing Code": null, "Response Hours": null, "Clocked Restore Hours": null, "On Site Date": "2026-04-01 00:00:00", "On Site Time": "14:00:00", "Tech Last Depart Date": "2026-03-11 00:00:00", "Tech Last Depart Time": "15:10:00", "Completed Date": null, "Last Work Performed": "Sample - Last Work Performed", "Last Ticket Activity": "Sent to SLM", "Resolution": "Dispenser", "Sub Resolution": "Investigated", "Time On Site Hours": 4.75, "Ticket Completed Date": null, "Service Type": "SLM", "Total Site Visits": 6, "Total Parts Used Trackable": 11, "Total Parts Used Consumable": 0, "Total Travel Time Mins": 399, "Serial No": "5300820403", "Comments": null}, {"Customer": "Customer 3", "Created Date": "2026-04-01 00:00:00", "Created Time": "15:25:04", "Ticket Status": "Incomplete", "Ticket Progress Status": "Unallocated", "Ticket ID": 4455674, "Customer Reference": "Test Ticket", "Device Code": 123463, "Model": "Test Model", "Region": "Remote", "Address": "21 Jump St, Sydney", "Postcode": "3943", "Device State": "VIC", "Device Service": "SLM", "Severity Type": "Not Functioning", "Description": "Test Description", "Cause": "Project", "Billing Code": null, "Response Hours": null, "Clocked Restore Hours": null, "On Site Date": null, "On Site Time": null, "Tech Last Depart Date": "2026-03-11 00:00:00", "Tech Last Depart Time": "11:20:00", "Completed Date": null, "Last Work Performed": "Sample - Last Work Performed", "Last Ticket Activity": "Sent to SLM", "Resolution": "Dispenser", "Sub Resolution": "Investigated", "Time On Site Hours": 5.45, "Ticket Completed Date": null, "Service Type": "Non Maintenance", "Total Site Visits": 1, "Total Parts Used Trackable": null, "Total Parts Used Consumable": null, "Total Travel Time Mins": null, "Serial No": "5310092320", "Comments": null}, {"Customer": "Customer 4", "Created Date": "2026-04-01 00:00:00", "Created Time": "14:25:05", "Ticket Status": "Incomplete", "Ticket Progress Status": "Unallocated", "Ticket ID": 4455675, "Customer Reference": "Test Ticket", "Device Code": 123464, "Model": "Test Model", "Region": "Country", "Address": "21 Jump St, Sydney", "Postcode": "4655", "Device State": "QLD", "Device Service": "SLM", "Severity Type": "Not Functioning", "Description": "Test Description", "Cause": "Project", "Billing Code": null, "Response Hours": null, "Clocked Restore Hours": null, "On Site Date": null, "On Site Time": null, "Tech Last Depart Date": "2026-03-11 00:00:00", "Tech Last Depart Time": "11:20:00", "Completed Date": null, "Last Work Performed": "Sample - Last Work Performed", "Last Ticket Activity": "Sent to SLM", "Resolution": "Dispenser", "Sub Resolution": "Investigated", "Time On Site Hours": 4.75, "Ticket Completed Date": null, "Service Type": "Non Maintenance", "Total Site Visits": 1, "Total Parts Used Trackable": null, "Total Parts Used Consumable": null, "Total Travel Time Mins": null, "Serial No": "5300730556", "Comments": null}, {"Customer": "Customer 5", "Created Date": "2026-04-01 00:00:00", "Created Time": "14:25:06", "Ticket Status": "Incomplete", "Ticket Progress Status": "Unallocated", "Ticket ID": 4455676, "Customer Reference": "Test Ticket", "Device Code": 123465, "Model": "Test Model", "Region": "Remote", "Address": "21 Jump St, Sydney", "Postcode": "4655", "Device State": "QLD", "Device Service": "SLM", "Severity Type": "Not Functioning", "Description": "Assign to CMC to close", "Cause": "Project", "Billing Code": null, "Response Hours": null, "Clocked Restore Hours": null, "On Site Date": null, "On Site Time": null, "Tech Last Depart Date": "2026-04-01 00:00:00", "Tech Last Depart Time": "11:20:00", "Completed Date": null, "Last Work Performed": "Sample - Last Work Performed", "Last Ticket Activity": "Sent to SLM", "Resolution": "Dispenser", "Sub Resolution": "Investigated", "Time On Site Hours": 5.45, "Ticket Completed Date": null, "Service Type": "Non Maintenance", "Total Site Visits": 1, "Total Parts Used Trackable": null, "Total Parts Used Consumable": null, "Total Travel Time Mins": null, "Serial No": "5300730556", "Comments": null}];
+const EMBEDDED_SECONDARY = [];
+const DEFAULT_FOLLOWUP_STATUSES = ["Waiting For Customer", "Customer Hold", "Quotation Request", "Allocated", "Unallocated", "Reopened"];
+const DEFAULT_BUS = ["Client Services", "CMC", "Field Management", "GSS", "Monitoring", "Networks", "No Action Required", "Projects", "Rob Hill", "SPT", "Tech Support"];
+const DEFAULT_PRIORITY_RULES = {
+  "progress": [
+    "Access",
+    "Allocated",
+    "Completed",
+    "Device Down Parts Required",
+    "Device Down Reattendance Required",
+    "Device Up Parts Required",
+    "Device Up Reattendance Required",
+    "Guard Arrived",
+    "Quote Approved",
+    "Reopened",
+    "Technician Arrived",
+    "Technician Dispatched",
+    "Unallocated",
+    "Waiting For Customer"
+  ],
+  "state": [
+    "ACT",
+    "NSW",
+    "NT",
+    "QLD",
+    "SA",
+    "TAS",
+    "VIC",
+    "WA"
+  ],
+  "service": [
+    "ANZ BCM Cencon Lock Work (BAU)",
+    "ANZ Fast Deposit Kiosk",
+    "ANZ Kiosk Technical Investigations",
+    "Cencon Key",
+    "Cencon Lock",
+    "Cencon Lock Work",
+    "Cencon Maintenance",
+    "Chronic Investigation Attendance",
+    "CLM",
+    "CLM - Branch",
+    "CLM - IDM After-hours",
+    "CLM - Off Site",
+    "CLM AH",
+    "Device Down",
+    "FLM",
+    "FLM (Tech & Guard - Priority 1)",
+    "FLM (Tech & Guard - Priority 2)",
+    "FLM (Tech & Guard)",
+    "FLM (Tech Only - Priority 1)",
+    "FLM (Tech Only - Priority 2)",
+    "FLM (Tech Only - Priority 3)",
+    "FLM (Tech Only)",
+    "General Service Work",
+    "General Service Work - BAU",
+    "Guard (Assist)",
+    "Guarding",
+    "Guarding - 3rd Party",
+    "Guarding - CLM IDM AH (for SLM Only)",
+    "Lock Work",
+    "Pop Up ATMs and IDMs",
+    "Retail",
+    "Retail - Nightowl Fuel",
+    "SLM",
+    "Tech Support Investigation"
+  ],
+  "ageBucket": [
+    "0-1 day",
+    "15-30 days",
+    "2 days",
+    "3-7 days",
+    "31-60 days",
+    "61-90 days",
+    "8-14 days",
+    "90+ days"
+  ]
+};
+const PRIORITY_FIELD_META = [
+  { key:'progress', label:'Ticket Progress' },
+  { key:'state', label:'State' },
+  { key:'service', label:'Dev. Service' },
+  { key:'ageBucket', label:'Age Bucket' }
+];
+const CHART_PALETTE = [
+  '#1f77b4', // blue
+  '#ff7f0e', // orange
+  '#2ca02c', // green
+  '#d62728', // red
+  '#9467bd', // purple
+  '#8c564b', // brown
+  '#e377c2', // pink
+  '#7f7f7f', // grey
+  '#bcbd22', // olive
+  '#17becf', // teal
+  '#003f5c', // navy
+  '#ffa600', // amber
+  '#58508d', // indigo
+  '#bc5090', // magenta
+  '#ff6361', // coral
+  '#00a6a6', // cyan-green
+  '#6f4e7c', // muted violet
+  '#c44536', // brick
+  '#4caf50', // strong green
+  '#ff9800'  // strong orange
+];
+
+function getChartTickFontSize() { return isPrintMode() ? 7 : 9; }
+function getChartLegendFontSize() { return isPrintMode() ? 8 : 11; }
+function getChartPieLabelFontSize() { return isPrintMode() ? 9 : 12; }
+
+
+const printPieLabelsPlugin = {
+  id: 'printPieLabels',
+  afterDatasetsDraw(chart) {
+    if (chart.config.type !== 'pie') return;
+    const dataset = chart.data?.datasets?.[0];
+    const labels = chart.data?.labels || [];
+    const values = (dataset?.data || []).map(v => Number(v) || 0);
+    if (!values.length) return;
+
+    const topIndexes = values
+      .map((v, i) => ({ v, i }))
+      .sort((a, b) => b.v - a.v)
+      .slice(0, 5)
+      .map(x => x.i);
+
+    const meta = chart.getDatasetMeta(0);
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${getChartPieLabelFontSize()}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    topIndexes.forEach(i => {
+      const arc = meta.data[i];
+      if (!arc) return;
+      const props = arc.getProps(['x', 'y', 'startAngle', 'endAngle', 'outerRadius'], true);
+      const angle = (props.startAngle + props.endAngle) / 2;
+      const radius = props.outerRadius * 0.66;
+      const x = props.x + Math.cos(angle) * radius;
+      const y = props.y + Math.sin(angle) * radius;
+      const label = `${labels[i]}: ${values[i]}`;
+      let rotation = angle;
+      if (rotation > Math.PI / 2 && rotation < (Math.PI * 3) / 2) rotation += Math.PI;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
+      ctx.fillText(label, 0, 0);
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+};
+Chart.register(printPieLabelsPlugin);
+const horizontalInsideLabelsPlugin = {
+  id: 'horizontalInsideLabels',
+  afterDatasetsDraw(chart) {
+    if (chart.config.type !== 'bar' || chart.options.indexAxis !== 'y') return;
+    const dataset = chart.data?.datasets?.[0];
+    const meta = chart.getDatasetMeta(0);
+    if (!dataset || !meta) return;
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${isPrintMode() ? 8 : 11}px Arial`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    (meta.data || []).forEach((bar, index) => {
+      const label = safeText(chart.data.labels?.[index]);
+      if (!label) return;
+      const props = bar.getProps(['base', 'x', 'y'], true);
+      const leftX = Math.min(props.base, props.x) + 8;
+      ctx.fillText(label, leftX, props.y);
+    });
+    ctx.restore();
+  }
+};
+Chart.register(horizontalInsideLabelsPlugin);
+Chart.defaults.animation = false;
+Chart.defaults.responsive = true;
+Chart.defaults.devicePixelRatio = isPrintMode() ? 3 : 6;
+
+let primaryRecords = [];
+let secondaryRecords = [];
+let mergedRecords = [];
+let filteredRecords = [];
+let charts = {};
+let adminUnlocked = true;
+let progressState = {
+  version: 3.4,
+  exportedAt: null,
+  followupStatuses: [...DEFAULT_FOLLOWUP_STATUSES],
+  businessUnits: [...DEFAULT_BUS],
+  priorityRules: JSON.parse(JSON.stringify(DEFAULT_PRIORITY_RULES)),
+  ticketMeta: {},
+};
+let activeWidgetFilter = '';
+
+const els = {
+  nexusFile: document.getElementById('nexusFile'),
+  progressFile: document.getElementById('progressFile'),
+  nexusStatus: document.getElementById('nexusStatus'),
+  progressStatus: document.getElementById('progressStatus'),
+  adminState: document.getElementById('adminState'),
+  oldestTicketPill: document.getElementById('oldestTicketPill'),
+  widgets: document.getElementById('widgets'),
+  rowCountLabel: document.getElementById('rowCountLabel'),
+  tableBody: document.getElementById('ticketTableBody'),
+  searchInput: document.getElementById('searchInput'),
+  customerFilter: document.getElementById('customerFilter'),
+  parentCustomerFilter: document.getElementById('parentCustomerFilter'),
+  progressFilter: document.getElementById('progressFilter'),
+  stateFilter: document.getElementById('stateFilter'),
+  serviceFilter: document.getElementById('serviceFilter'),
+  ticketTypeFilter: document.getElementById('ticketTypeFilter'),
+  assignedToFilter: document.getElementById('assignedToFilter'),
+  createdByFilter: document.getElementById('createdByFilter'),
+  ageFilter: document.getElementById('ageFilter'),
+  etaStatusFilter: document.getElementById('etaStatusFilter'),
+  assigneePresenceFilter: document.getElementById('assigneePresenceFilter'),
+  reviewPresenceFilter: document.getElementById('reviewPresenceFilter'),
+  ancientFilter: document.getElementById('ancientFilter'),
+  buFilter: document.getElementById('buFilter'),
+  emailBtn: document.getElementById('emailBtn'),
+  includeProjectsToggle: document.getElementById('includeProjectsToggle'),
+  createdTodayToggle: document.getElementById('createdTodayToggle'),
+  clearFiltersBtn: document.getElementById('clearFiltersBtn'),
+  adminPanel: document.getElementById('adminPanel'),
+  adminBtn: document.getElementById('adminBtn'),
+  adminControls: document.getElementById('adminControls'),
+  priorityRulesContainer: document.getElementById('priorityRulesContainer'),
+  selectedPrioritySummary: document.getElementById('selectedPrioritySummary'),
+  buListEditor: document.getElementById('buListEditor'),
+  saveAdminBtn: document.getElementById('saveAdminBtn'),
+  lockAdminBtn: document.getElementById('lockAdminBtn'),
+  exportProgressBtn: document.getElementById('exportProgressBtn'),
+  printBtn: document.getElementById('printBtn'),
+  openMapBtn: document.getElementById('openMapBtn'),
+  printSummary: document.getElementById('printSummary')
+};
+
+function safeText(v) { return v == null ? '' : String(v).trim(); }
+function norm(v) { return safeText(v).toLowerCase(); }
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function cleanAddress(value) {
+  const raw = safeText(value);
+  if (!raw) return '';
+  if (/^\d/.test(raw)) return raw;
+  const parts = raw.split(',').map(p => safeText(p)).filter(Boolean);
+  const firstNumeric = parts.find(part => /^\d/.test(part));
+  return firstNumeric || raw;
+}
+
+function excelSerialToDate(value) {
+  if (typeof value !== 'number' || !isFinite(value)) return null;
+  const utcDays = Math.floor(value - 25569);
+  const utcValue = utcDays * 86400;
+  const dateInfo = new Date(utcValue * 1000);
+  const fractionalDay = value - Math.floor(value);
+  const totalSeconds = Math.round(fractionalDay * 86400);
+  dateInfo.setHours(0, 0, 0, 0);
+  dateInfo.setSeconds(totalSeconds);
+  return isNaN(dateInfo) ? null : dateInfo;
+}
+function parseTimeParts(value) {
+  if (value == null || value === '') return { hh:0, mm:0, ss:0 };
+  if (typeof value === 'number' && isFinite(value)) {
+    const totalSeconds = Math.round((value % 1) * 86400);
+    return {
+      hh: Math.floor(totalSeconds / 3600),
+      mm: Math.floor((totalSeconds % 3600) / 60),
+      ss: totalSeconds % 60
+    };
+  }
+  const raw = safeText(value);
+  const match = raw.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(am|pm)?/i);
+  if (!match) return { hh:0, mm:0, ss:0 };
+  let hh = Number(match[1]);
+  const mm = Number(match[2]);
+  const ss = Number(match[3] || 0);
+  const meridiem = (match[4] || '').toLowerCase();
+  if (meridiem === 'pm' && hh < 12) hh += 12;
+  if (meridiem === 'am' && hh === 12) hh = 0;
+  return { hh, mm, ss };
+}
+function parsePrimaryCreatedDate(rec) {
+  const rawDate = rec['Created Date'];
+  const rawTime = rec['Created Time'];
+  if ((rawDate == null || rawDate === '') && (rawTime == null || rawTime === '')) return null;
+
+  if (rawDate instanceof Date && !isNaN(rawDate)) {
+    const dt = new Date(rawDate);
+    const parts = parseTimeParts(rawTime);
+    dt.setHours(parts.hh, parts.mm, parts.ss, 0);
+    return isNaN(dt) ? null : dt;
+  }
+
+  if (typeof rawDate === 'number' && isFinite(rawDate)) {
+    const dt = excelSerialToDate(rawDate);
+    if (!dt) return null;
+    const parts = parseTimeParts(rawTime);
+    if (rawTime != null && rawTime !== '') dt.setHours(parts.hh, parts.mm, parts.ss, 0);
+    return isNaN(dt) ? null : dt;
+  }
+
+  const d = safeText(rawDate);
+  const t = safeText(rawTime);
+  if (!d && !t) return null;
+
+  const slashMatch = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (slashMatch) {
+    let [, dd, mm, yyyy, hh='0', mi='0', ss='0'] = slashMatch;
+    let yearNum = Number(yyyy);
+    if (yyyy.length === 2) yearNum += yearNum >= 70 ? 1900 : 2000;
+    const parts = t ? parseTimeParts(t) : { hh:Number(hh), mm:Number(mi), ss:Number(ss) };
+    const dt = new Date(yearNum, Number(mm) - 1, Number(dd), parts.hh, parts.mm, parts.ss);
+    return isNaN(dt) ? null : dt;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(d)) {
+    const dateOnly = d.slice(0,10);
+    const parts = parseTimeParts(t || (d.length >= 19 ? d.slice(11,19) : '00:00:00'));
+    const [yyyy, mm, dd] = dateOnly.split('-').map(Number);
+    const dt = new Date(yyyy, mm - 1, dd, parts.hh, parts.mm, parts.ss);
+    return isNaN(dt) ? null : dt;
+  }
+
+  const parsedAlt = parseAltDate(`${d} ${t}`.trim());
+  if (parsedAlt) return parsedAlt;
+
+  const dt = new Date(`${d} ${t}`.trim());
+  return isNaN(dt) ? null : dt;
+}
+function parseAltDate(value) {
+  const raw = safeText(value);
+  if (!raw) return null;
+  const cleaned = raw.replace(/UTC[+-]\d{2}:?\d{2}/i, '').trim();
+  const dmY = cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?/);
+  if (dmY) {
+    let [,dd,mm,yyyy,hh='0',mi='0',ss='0'] = dmY;
+    let yearNum = Number(yyyy);
+    if (yyyy.length === 2) yearNum += yearNum >= 70 ? 1900 : 2000;
+    const dt = new Date(yearNum, Number(mm)-1, Number(dd), Number(hh), Number(mi), Number(ss));
+    return isNaN(dt) ? null : dt;
+  }
+  const iso = cleaned.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+  if (iso) {
+    const [,yyyy,mm,dd,hh='0',mi='0',ss='0'] = iso;
+    const dt = new Date(Number(yyyy), Number(mm)-1, Number(dd), Number(hh), Number(mi), Number(ss));
+    return isNaN(dt) ? null : dt;
+  }
+  const dt = new Date(cleaned);
+  return isNaN(dt) ? null : dt;
+}
+
+function ageInDays(dateObj) {
+  if (!dateObj || isNaN(dateObj)) return null;
+  const today = new Date();
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const dateStart = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+  return Math.max(0, Math.floor((todayStart - dateStart) / 86400000));
+}
+function ageBucket(days) {
+  if (days == null || days < 0) return 'Unknown';
+  if (days > 730) return '2yr';
+  if (days > 365) return '1yr';
+  if (days <= 1) return '0-1 day';
+  if (days === 2) return '2 days';
+  if (days <= 7) return '3-7 days';
+  if (days <= 14) return '8-14 days';
+  if (days <= 30) return '15-30 days';
+  if (days <= 60) return '31-60 days';
+  if (days <= 90) return '61-90 days';
+  return '90+ days';
+}
+function formatDateDDMMYYYY(dateObj) {
+  if (!dateObj || isNaN(dateObj)) return '--/--/----';
+  const dd = String(dateObj.getDate()).padStart(2, '0');
+  const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const yyyy = dateObj.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
+}
+function formatShortDate(dateObj) {
+  if (!dateObj || isNaN(dateObj)) return '';
+  return dateObj.toLocaleDateString('en-AU');
+}
+function clonePriorityRules(rules) {
+  const out = {};
+  PRIORITY_FIELD_META.forEach(field => { out[field.key] = Array.isArray(rules?.[field.key]) ? [...new Set(rules[field.key].map(safeText).filter(Boolean))] : []; });
+  return out;
+}
+function getPriorityRules() {
+  return clonePriorityRules(progressState.priorityRules || DEFAULT_PRIORITY_RULES);
+}
+function getPriorityFieldOptions(key) {
+  if (key === 'bu') return getBusinessUnits();
+  return uniqueSorted(mergedRecords, key);
+}
+function getAutoBU(ticketType, service, progress, nextETADate, nextETA) {
+  const type = norm(ticketType);
+  const serviceName = safeText(service);
+  const etaStatus = getEtaStatus(progress, nextETADate, nextETA);
+  const cmcServices = new Set([
+    'Cencon Key','Cencon Lock','Cencon Lock Work','Cencon Maintenance','Chronic Investigation Attendance','General Service Work','General Service Work - BAU','Guard (Assist)','Guarding','Guarding - 3rd Party','Guarding - CLM IDM AH (for SLM Only)','Investigation','Lock Work','Retail'
+  ]);
+  if (etaStatus === 'Future ETA') return 'No Action Required';
+  if (type === 'service request') return cmcServices.has(serviceName) ? 'CMC' : 'Projects';
+  return '';
+}
+
+function getEtaStatus(progress, nextETADate, nextETA) {
+  const progressNorm = norm(progress);
+  if (nextETADate) {
+    const now = new Date();
+    const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const etaDateOnly = new Date(nextETADate.getFullYear(), nextETADate.getMonth(), nextETADate.getDate());
+    return etaDateOnly >= startToday ? 'Future ETA' : 'Expired ETA';
+  }
+  if (!safeText(nextETA) && (progressNorm === 'allocated' || progressNorm === 'technician dispatched')) return 'No ETA';
+  return '';
+}
+function buildSecondaryMap() {
+  const map = new Map();
+  secondaryRecords.map(cleanSecondaryRecord).forEach(r => { if (r.ticketNo) map.set(r.ticketNo, r); });
+  return map;
+}
+function getNexusDerivedValuesForTicket(ticketId) {
+  const id = safeText(ticketId);
+  if (!id) return { comment:'', bu:'', autoComment:'' };
+  const primaryById = new Map(applyBaseRules(primaryRecords.map(cleanPrimaryRecord)).map(r => [r.ticketId, r]));
+  const primary = primaryById.get(id);
+  if (!primary) return { comment:'', bu:'', autoComment:'' };
+  const autoBU = getAutoBU(primary.ticketType, primary.service, primary.progress, primary.nextETADate, primary.nextETA);
+  const autoComment = autoBU === 'Projects' ? 'Projects Team to Advise' : '';
+  return { comment:autoComment, bu:autoBU, autoComment };
+}
+function getEffectiveLocation(record) {
+  const parts = [record.secondaryAddress, record.secondaryCity].map(safeText).filter(Boolean);
+  const fromSecondary = parts.join(', ');
+  return fromSecondary || safeText(record.address);
+}
+function isDashboardRegionIncluded(region) {
+  return true;
+}
+function isPriorityTicket(record) {
+  const rules = getPriorityRules();
+  const activeFields = PRIORITY_FIELD_META.filter(field => Array.isArray(rules[field.key]) && rules[field.key].length);
+  if (!activeFields.length) return false;
+  return activeFields.every(field => rules[field.key].includes(safeText(record[field.key])));
+}
+function getMultiSelectValues(select) {
+  if (!select || !select.multiple) return [select?.value || 'all'];
+  const values = [...select.selectedOptions].map(o => o.value).filter(Boolean);
+  return values.length ? values : ['all'];
+}
+function matchesMultiFilter(value, selectedValues) {
+  return selectedValues.includes('all') || selectedValues.includes(safeText(value));
+}
+
+function getSelectedFilterSummary() {
+  const parts = [];
+  const pushIf = (label, value) => { if (value && value !== 'all') parts.push(`${label} (${value})`); };
+  if (safeText(els.searchInput.value)) parts.push(`Search (${safeText(els.searchInput.value)})`);
+  pushIf('State', els.stateFilter.value);
+  pushIf('Customer', els.customerFilter.value);
+  pushIf('Parent Customer', els.parentCustomerFilter.value);
+  pushIf('Ticket Progress', els.progressFilter.value);
+  pushIf('Ticket Type', els.ticketTypeFilter.value);
+  pushIf('Dev. Service', els.serviceFilter.value);
+  pushIf('Assigned To', els.assignedToFilter.value);
+  pushIf('Created By', els.createdByFilter.value);
+  pushIf('Age Bucket', els.ageFilter.value);
+  pushIf('ETA Status', els.etaStatusFilter.value);
+  pushIf('Has Assignee', els.assigneePresenceFilter.value === 'yes' ? 'Yes' : els.assigneePresenceFilter.value === 'no' ? 'No' : 'all');
+  pushIf('Has Review Date', els.reviewPresenceFilter.value === 'yes' ? 'Yes' : els.reviewPresenceFilter.value === 'no' ? 'No' : 'all');
+  pushIf('Ancient', els.ancientFilter.value === 'yes' ? 'Yes' : els.ancientFilter.value === 'no' ? 'No' : 'all');
+  pushIf('Responsible BU', els.buFilter.value);
+  if (els.createdTodayToggle?.checked) parts.push('Created Today (On)');
+  if (activeWidgetFilter === 'followup') parts.push('Widget (Follow Up)');
+  return parts.length ? `Filters Applied: ${parts.join(' | ')}` : 'Filters Applied: None';
+}
+function updatePrintSummary() {
+  if (els.printSummary) els.printSummary.textContent = getSelectedFilterSummary();
+}
+function buildPrintFileName() {
+  const date = new Date().toLocaleDateString('en-AU').replace(/\//g, '-');
+  return `Client Services Report - ${date}`;
+}
+
+function getAllowedService(service) {
+  const s = norm(service);
+  return s.startsWith('clm') || s.startsWith('slm') || s.startsWith('flm') || s.startsWith('retail');
+}
+function getFollowupStatuses() {
+  return Array.isArray(progressState.followupStatuses) && progressState.followupStatuses.length
+    ? progressState.followupStatuses
+    : [...DEFAULT_FOLLOWUP_STATUSES];
+}
+function getBusinessUnits() {
+  const base = Array.isArray(progressState.businessUnits) && progressState.businessUnits.length
+    ? progressState.businessUnits
+    : [...DEFAULT_BUS];
+  return [...new Set([...base, ...uniqueSorted(mergedRecords, 'bu')].map(safeText).filter(Boolean))].sort((a,b) => a.localeCompare(b));
+}
+function setBusinessUnits(arr) {
+  progressState.businessUnits = [...new Set(arr.map(safeText).filter(Boolean))];
+}
+function renderBUDatalist() {
+  const opts = getBusinessUnits().map(v => `<option value="${escapeHtml(v)}"></option>`).join('');
+  const dl = document.getElementById('buOptions');
+  if (dl) dl.innerHTML = opts;
+}
+function ensureMeta(ticketId) {
+  if (!progressState.ticketMeta[ticketId]) progressState.ticketMeta[ticketId] = { tag:'', bu:'' };
+  return progressState.ticketMeta[ticketId];
+}
+function setTag(ticketId, value) {
+  const meta = ensureMeta(ticketId);
+  meta.tag = value || '';
+  if (!meta.tag && !meta.bu) delete progressState.ticketMeta[ticketId];
+}
+function setBU(ticketId, value) {
+  const meta = ensureMeta(ticketId);
+  meta.bu = value || '';
+  if (!meta.tag && !meta.bu) delete progressState.ticketMeta[ticketId];
+}
+function setFollowupStatuses(arr) {
+  progressState.followupStatuses = [...arr];
+}
+function isCompletedStatus(status) {
+  const s = norm(status);
+  return s === 'complete' || s === 'completed' || s === 'cancelled' || s === 'canceled';
+}
+function cleanPrimaryRecord(rec) {
+  const ticketId = safeText(rec['Ticket ID'] || rec['Ticket No.'] || rec['Ticket No']);
+  const createdAt = parsePrimaryCreatedDate({ 'Created Date': rec['Created Date'], 'Created Time': rec['Created Time'] || '' }) || parseAltDate(rec['Created Date']);
+  const ageDays = ageInDays(createdAt);
+  const nextETA = safeText(rec['Next ETA']);
+  const nextETADate = parseAltDate(rec['Next ETA']) || parsePrimaryCreatedDate({ 'Created Date': rec['Next ETA'], 'Created Time': '' });
+  return {
+    ticketId, customer: safeText(rec['Customer']), parentCustomer: safeText(rec['Parent Customer']), progress: safeText(rec['Ticket Progress'] || rec['Ticket Progress Status']), ticketStatus: safeText(rec['Ticket Status']), state: safeText(rec['State'] || rec['Device State']), service: safeText(rec['Device Service / Sub Category'] || rec['Device Service']), description: safeText(rec['Description']), address: cleanAddress(rec['Address']), city: safeText(rec['City']), postcode: safeText(rec['Postcode']), deviceCode: safeText(rec['Device ID'] || rec['Device Code']), model: safeText(rec['Model']), serialNo: safeText(rec['Serial No.'] || rec['Serial No']), createdBy: safeText(rec['Created By']), assignedTo: safeText(rec['Assigned To']), reviewDate: safeText(rec['Review Date']), reviewDateObj: parseAltDate(rec['Review Date']), siteName: safeText(rec['Site Name']), ticketType: safeText(rec['Ticket Type']), nextETA, nextETADate, createdAt, ageDays, ageBucket: ageBucket(ageDays), raw: rec
+  };
+}
+
+function cleanSecondaryRecord(rec) {
+  return {
+    ticketNo: safeText(rec['Ticket No.'] || rec['Ticket No'] || rec['Ticket ID']),
+    nextETA: safeText(rec['Next ETA']),
+    nextETADate: parseAltDate(rec['Next ETA']),
+    status: safeText(rec['Status'] || rec['Ticket Status'] || rec['Progress'] || rec['Ticket Progress'] || rec['Ticket Progress Status']),
+    assignedTo: safeText(rec['Assigned To'] || rec['AssignedTo'] || rec['Assigned'] || rec['Technician'] || rec['Tech Name'] || rec['Resource'] || rec['Engineer'] || rec['Allocated To']),
+    address: safeText(rec['Address'] || rec['Site Address'] || rec['Street Address'] || rec['Location Address']),
+    city: safeText(rec['City'] || rec['Suburb'] || rec['Town'] || rec['Location City'])
+  };
+}
+function applyBaseRules(records) {
+  return records.filter(r => {
+    const customer = norm(r.customer);
+    return !!r.ticketId && customer !== 'transport for nsw';
+  });
+}
+function mergeData() {
+  const secondMap = buildSecondaryMap();
+  mergedRecords = applyBaseRules(primaryRecords.map(cleanPrimaryRecord)).map(r => {
+    const match = secondMap.get(r.ticketId);
+    const resolvedNextETA = match?.nextETA || r.nextETA || '';
+    const resolvedNextETADate = match?.nextETADate || r.nextETADate || null;
+    const resolvedAssignedTo = safeText(match?.assignedTo) || safeText(r.assignedTo);
+    const meta = progressState.ticketMeta[r.ticketId] || { tag:'', bu:'' };
+    const etaStatus = getEtaStatus(r.progress, resolvedNextETADate, resolvedNextETA);
+    const autoBU = getAutoBU(r.ticketType, r.service, r.progress, resolvedNextETADate, resolvedNextETA);
+    const manualBU = safeText(meta.bu);
+    const overwrittenFrom = manualBU && autoBU && norm(manualBU) !== norm(autoBU) ? autoBU : '';
+    const displayBU = manualBU || autoBU;
+    const autoComment = displayBU === 'Projects' ? 'Projects Team to Advise' : '';
+    const manualComment = safeText(meta.tag);
+    const overwrittenCommentFrom = manualComment && autoComment && norm(manualComment) !== norm(autoComment) ? autoComment : '';
+    const displayComment = manualComment || autoComment;
+    return { ...r, nextETA: resolvedNextETA, nextETADate: resolvedNextETADate, etaStatus, tag: manualComment, comment: displayComment, manualComment, autoComment, overwrittenCommentFrom, bu: displayBU, manualBU, autoBU, overwrittenFrom, assignedTo: resolvedAssignedTo, hasNextETA: !!safeText(resolvedNextETA), hasAssignedTo: !!safeText(resolvedAssignedTo), hasReviewDate: !!safeText(r.reviewDate), followupRequired: !safeText(displayBU), secondaryAddress: safeText(match?.address), secondaryCity: safeText(match?.city), secondaryStatus: match?.status || '', secondaryComplete: false, longFutureETA: false };
+  });
+}
+function uniqueSorted(records, key) {
+  const vals = [...new Set(records.map(r => safeText(r[key])).filter(Boolean))];
+  return vals.sort((a,b) => a.localeCompare(b));
+}
+function fillSelect(select, options, allLabel='All') {
+  if (select.multiple) {
+    const current = new Set([...select.selectedOptions].map(o => o.value));
+    select.innerHTML = options.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+    [...select.options].forEach(o => { if (current.has(o.value)) o.selected = true; });
+    return;
+  }
+  const current = select.value;
+  select.innerHTML = `<option value="all">${escapeHtml(allLabel)}</option>` + options.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  if ([...select.options].some(o => o.value === current)) select.value = current;
+}
+function populateFilters() {
+  fillSelect(els.customerFilter, uniqueSorted(mergedRecords, 'customer'));
+  fillSelect(els.parentCustomerFilter, uniqueSorted(mergedRecords, 'parentCustomer'));
+  fillSelect(els.progressFilter, uniqueSorted(mergedRecords, 'progress'));
+  fillSelect(els.stateFilter, uniqueSorted(mergedRecords, 'state'));
+  fillSelect(els.serviceFilter, uniqueSorted(mergedRecords, 'service'));
+  fillSelect(els.ticketTypeFilter, uniqueSorted(mergedRecords, 'ticketType'));
+  fillSelect(els.assignedToFilter, uniqueSorted(mergedRecords, 'assignedTo'));
+  fillSelect(els.createdByFilter, uniqueSorted(mergedRecords, 'createdBy'));
+  fillSelect(els.ageFilter, ['0-1 day','2 days','3-7 days','8-14 days','15-30 days','31-60 days','61-90 days','90+ days','1yr','2yr']);
+  fillSelect(els.etaStatusFilter, uniqueSorted(mergedRecords, 'etaStatus'));
+  fillSelect(els.buFilter, getBusinessUnits());
+  renderBUDatalist();
+}
+function matchesFilter(value, selected) {
+  return selected === 'all' || safeText(value) === safeText(selected);
+}
+function applyFilters() {
+  const q = norm(els.searchInput.value);
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  filteredRecords = mergedRecords.filter(r => {
+    const widgetPass = !activeWidgetFilter || (activeWidgetFilter === 'followup' ? !safeText(r.bu) : true);
+    const priorityPass = els.includeProjectsToggle && els.includeProjectsToggle.checked ? true : isPriorityTicket(r);
+    const etaStatusPass = matchesFilter(r.etaStatus, els.etaStatusFilter.value);
+    const assigneePass = els.assigneePresenceFilter.value === 'all' || (els.assigneePresenceFilter.value === 'yes' ? r.hasAssignedTo : !r.hasAssignedTo);
+    const reviewPass = els.reviewPresenceFilter.value === 'all' || (els.reviewPresenceFilter.value === 'yes' ? r.hasReviewDate : !r.hasReviewDate);
+    const ancientPass = els.ancientFilter.value === 'all' || (els.ancientFilter.value === 'yes' ? (r.ageDays || 0) > 365 : (r.ageDays || 0) <= 365);
+    const createdTodayPass = !els.createdTodayToggle?.checked || (r.createdAt && !isNaN(r.createdAt) && r.createdAt >= todayStart);
+    const searchPass = !q || [r.ticketId, r.customer, r.parentCustomer, r.address, r.city, r.state, r.siteName, r.deviceCode, r.model, r.serialNo, r.createdBy, r.progress, r.ticketType, r.service, r.bu, r.comment, r.etaStatus].some(v => norm(v).includes(q));
+    return searchPass && priorityPass && matchesFilter(r.customer, els.customerFilter.value) && matchesFilter(r.parentCustomer, els.parentCustomerFilter.value) && matchesFilter(r.progress, els.progressFilter.value) && matchesFilter(r.state, els.stateFilter.value) && matchesFilter(r.service, els.serviceFilter.value) && matchesFilter(r.ticketType, els.ticketTypeFilter.value) && matchesFilter(r.assignedTo, els.assignedToFilter.value) && matchesFilter(r.createdBy, els.createdByFilter.value) && matchesFilter(r.ageBucket, els.ageFilter.value) && matchesFilter(r.bu, els.buFilter.value) && etaStatusPass && assigneePass && reviewPass && ancientPass && createdTodayPass && widgetPass;
+  }).sort((a,b) => (b.ageDays ?? -1) - (a.ageDays ?? -1));
+}
+function countBy(records, key, limit=null) {
+  const map = new Map();
+  records.forEach(r => { const k = safeText(r[key]) || 'Blank'; map.set(k, (map.get(k) || 0) + 1); });
+  let arr = [...map.entries()].sort((a,b) => b[1] - a[1]);
+  if (limit) arr = arr.slice(0, limit);
+  return arr;
+}
+function renderWidgets() {
+  const total = filteredRecords.length;
+  const followup = filteredRecords.filter(r => !safeText(r.bu)).length;
+  const unallocated = filteredRecords.filter(r => norm(r.progress) === 'unallocated').length;
+  const allocated = filteredRecords.filter(r => norm(r.progress) === 'allocated').length;
+  const noNextETA = filteredRecords.filter(r => !r.hasNextETA).length;
+  const noReviewDate = filteredRecords.filter(r => !r.hasReviewDate).length;
+  const incidents = filteredRecords.filter(r => norm(r.ticketType) === 'incident').length;
+  const serviceRequests = filteredRecords.filter(r => norm(r.ticketType) === 'service request').length;
+  const age90 = filteredRecords.filter(r => (r.ageDays || 0) > 90).length;
+  els.widgets.innerHTML = `
+    <div class="card widget"><h3>Total Backlog</h3><div class="value">${total}</div></div>
+    <div class="card widget"><h3>Unallocated</h3><div class="value">${unallocated}</div></div>
+    <div class="card widget"><h3>Allocated</h3><div class="value">${allocated}</div></div>
+    <div class="card widget"><h3>No Next ETA</h3><div class="value">${noNextETA}</div></div>
+    <div class="card widget"><h3>No Review Date</h3><div class="value">${noReviewDate}</div></div>
+    <div class="card widget filterable ${activeWidgetFilter === 'followup' ? 'active-filter' : ''}" data-widget-filter="followup"><h3>Follow Up</h3><div class="value">${followup}</div></div>
+    <div class="card widget"><h3>Incidents</h3><div class="value">${incidents}</div></div>
+    <div class="card widget"><h3>Service Requests</h3><div class="value">${serviceRequests}</div></div>
+    <div class="card widget"><h3>90+ Days Old</h3><div class="value">${age90}</div></div>
+  `;
+}
+function updateOldestTicketPill() {
+  const oldest = filteredRecords
+    .filter(r => r.createdAt && !isNaN(r.createdAt))
+    .sort((a, b) => a.createdAt - b.createdAt)[0];
+  els.oldestTicketPill.textContent = `Oldest Ticket: ${oldest ? formatDateDDMMYYYY(oldest.createdAt) : '--/--/----'}`;
+}
+function destroyCharts() { Object.values(charts).forEach(c => c?.destroy?.()); charts = {}; }
+function createPieChart(id, dataPairs) {
+  charts[id] = new Chart(document.getElementById(id), {
+    type:'pie',
+    data:{
+      labels:dataPairs.map(x=>x[0]),
+      datasets:[{
+        data:dataPairs.map(x=>x[1]),
+        backgroundColor:dataPairs.map((_, i) => CHART_PALETTE[i % CHART_PALETTE.length]),
+        borderColor:'#ffffff',
+        borderWidth:1
+      }]
+    },
+    options:{ responsive:true, maintainAspectRatio:true, layout:{ padding:{ left:0, right:0, top:0, bottom:0 } }, plugins:{ legend:{ display:false, labels:{ font:{ size:getChartLegendFontSize() } } } } }
+  });
+}
+function createBarChart(id, dataPairs, options = {}) {
+  const isHorizontal = (options.indexAxis || 'y') === 'y';
+  charts[id] = new Chart(document.getElementById(id), {
+    type:'bar',
+    data:{ labels:dataPairs.map(x=>x[0]), datasets:[{ data:dataPairs.map(x=>x[1]), backgroundColor:dataPairs.map((_, i) => CHART_PALETTE[i % CHART_PALETTE.length]), borderColor:dataPairs.map((_, i) => CHART_PALETTE[i % CHART_PALETTE.length]), borderWidth:1 }] },
+    options:{ indexAxis: options.indexAxis || 'y', responsive:true, maintainAspectRatio:true, layout:{ padding:{ left:0, right:0, top:0, bottom:0 } }, scales:{ x:{ beginAtZero:true, grace:0, offset:false, ticks:{ precision:0, font:{ size:getChartTickFontSize() } }, stacked: !!options.stacked }, y:{ ticks:{ display: !isHorizontal, font:{ size:getChartTickFontSize() } }, stacked: !!options.stacked } }, plugins:{ legend:{ display:false, labels:{ font:{ size:getChartLegendFontSize() } } } } }
+  });
+}
+function createStackedChart(id, labels, datasets) {
+  charts[id] = new Chart(document.getElementById(id), {
+    type:'bar',
+    data:{ labels, datasets },
+    options:{
+      responsive:true,
+      maintainAspectRatio:true,
+      layout:{ padding:{ left:0, right:0, top:0, bottom:0 } },
+      scales:{
+        x:{ stacked:true, grace:0, offset:false, ticks:{ font:{ size:getChartTickFontSize() } } },
+        y:{ stacked:true, beginAtZero:true, ticks:{ precision:0, font:{ size:getChartTickFontSize() } } }
+      },
+      plugins:{ legend:{ display:true, position:'bottom', labels:{ font:{ size:getChartLegendFontSize() } } } }
+    }
+  });
+}
+function renderSimpleTable(targetId, headers, rows) {
+  const target = document.getElementById(targetId); if (!target) return;
+  target.innerHTML = `<div class="table-scroll summary-table-scroll"><table class="summary-report-table"><thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>${rows.length ? rows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell == null ? '' : String(cell))}</td>`).join('')}</tr>`).join('') : `<tr><td colspan="${headers.length}">No data</td></tr>`}</tbody></table></div>`;
+}
+function averageAgeBy(records, key, limit=10) {
+  const map = new Map();
+  records.forEach(r => { const k = safeText(r[key]) || 'Blank'; if (!map.has(k)) map.set(k, { total:0, count:0 }); map.get(k).total += Number(r.ageDays || 0); map.get(k).count += 1; });
+  return [...map.entries()].map(([k,v]) => [k, v.count ? Number((v.total / v.count).toFixed(1)) : 0]).sort((a,b) => b[1]-a[1]).slice(0, limit);
+}
+function buildCrossTabRows(records, groupKey, bucketValues, bucketFn, limit=10) {
+  const groups = [...new Set(records.map(r => safeText(r[groupKey]) || 'Blank'))];
+  return groups.map(group => { const groupRows = records.filter(r => (safeText(r[groupKey]) || 'Blank') === group); const values = bucketValues.map(bucket => groupRows.filter(r => bucketFn(r) === bucket).length); const total = values.reduce((a,b)=>a+b,0); return [group, ...values, total]; }).sort((a,b) => b[b.length-1] - a[a.length-1]).slice(0, limit);
+}
+function renderSummaryTables() {
+  const progresses = [...new Set(filteredRecords.map(r => safeText(r.progress) || 'Blank'))];
+  const stateRows = [...new Set(filteredRecords.map(r => safeText(r.state) || 'Blank'))].map(state => { const rowRecords = filteredRecords.filter(r => (safeText(r.state) || 'Blank') === state); const vals = progresses.map(p => rowRecords.filter(r => (safeText(r.progress) || 'Blank') === p).length); const total = vals.reduce((a,b)=>a+b,0); return [state, ...vals, total]; }).sort((a,b) => b[b.length-1]-a[a.length-1]).slice(0, 12);
+  renderSimpleTable('stateProgressMatrix', ['State', ...progresses, 'Total'], stateRows);
+  const ageBuckets = ['0-1 day','2 days','3-7 days','8-14 days','15-30 days','31-60 days','61-90 days','90+ days','1yr','2yr'];
+  renderSimpleTable('customerAgeTable', ['Customer', ...ageBuckets, 'Total'], buildCrossTabRows(filteredRecords, 'customer', ageBuckets, r => r.ageBucket, 10));
+  const customerExceptionRows = [...new Set(filteredRecords.map(r => safeText(r.customer) || 'Blank'))].map(customer => { const rows = filteredRecords.filter(r => (safeText(r.customer) || 'Blank') === customer); const noEta = rows.filter(r => !r.hasNextETA).length; const noAssignee = rows.filter(r => !r.hasAssignedTo).length; return [customer, noEta, noAssignee, rows.length]; }).sort((a,b) => b[3]-a[3]).slice(0, 10);
+  renderSimpleTable('customerExceptionTable', ['Customer', 'No ETA', 'No Assignee', 'Total'], customerExceptionRows);
+  renderSimpleTable('serviceAgeTable', ['Dev. Service', ...ageBuckets, 'Total'], buildCrossTabRows(filteredRecords, 'service', ageBuckets, r => r.ageBucket, 10));
+}
+function isPrintMode() {
+  return document.body.classList.contains('print-mode') || window.matchMedia('print').matches;
+}
+function renderCharts() {
+  destroyCharts();
+  createBarChart('ageChart', [['0-1 day', filteredRecords.filter(r => r.ageBucket === '0-1 day').length],['2 days', filteredRecords.filter(r => r.ageBucket === '2 days').length],['3-7 days', filteredRecords.filter(r => r.ageBucket === '3-7 days').length],['8-14 days', filteredRecords.filter(r => r.ageBucket === '8-14 days').length],['15-30 days', filteredRecords.filter(r => r.ageBucket === '15-30 days').length],['31-60 days', filteredRecords.filter(r => r.ageBucket === '31-60 days').length],['61-90 days', filteredRecords.filter(r => r.ageBucket === '61-90 days').length],['90+ days', filteredRecords.filter(r => r.ageBucket === '90+ days').length],['1yr', filteredRecords.filter(r => r.ageBucket === '1yr').length],['2yr', filteredRecords.filter(r => r.ageBucket === '2yr').length]], { indexAxis:'y' });
+  createBarChart('ageByCustomerChart', averageAgeBy(filteredRecords, 'customer', 10), { indexAxis:'y' });
+  createBarChart('stateChart', countBy(filteredRecords, 'state', 10), { indexAxis:'y' });
+  createBarChart('cityChart', countBy(filteredRecords, 'city', 10), { indexAxis:'y' });
+  createBarChart('customerChart', countBy(filteredRecords, 'customer', 10), { indexAxis:'y' });
+  createPieChart('ticketTypeChart', countBy(filteredRecords, 'ticketType'));
+  createBarChart('serviceChart', countBy(filteredRecords, 'service', 10), { indexAxis:'y' });
+  createBarChart('modelChart', countBy(filteredRecords, 'model', 10), { indexAxis:'y' });
+  createBarChart('buChart', countBy(filteredRecords, 'bu', 10), { indexAxis:'y' });
+  renderSummaryTables();
+}
+const printMediaQuery = window.matchMedia ? window.matchMedia('print') : null;
+if (printMediaQuery) {
+  const onPrintMediaChange = (e) => {
+    if (e.matches) prepareForPrint();
+    else cleanupAfterPrint();
+  };
+  if (typeof printMediaQuery.addEventListener === 'function') {
+    printMediaQuery.addEventListener('change', onPrintMediaChange);
+  } else if (typeof printMediaQuery.addListener === 'function') {
+    printMediaQuery.addListener(onPrintMediaChange);
+  }
+}
+function renderTable() {
+  els.rowCountLabel.textContent = `${filteredRecords.length} ticket${filteredRecords.length === 1 ? '' : 's'} shown`;
+  els.tableBody.innerHTML = filteredRecords.map(r => {
+    const ageTxt = r.ageDays == null ? '' : `${r.ageDays} day${r.ageDays === 1 ? '' : 's'}`;
+    const createdTxt = r.createdAt ? formatDateDDMMYYYY(r.createdAt) : '';
+    const isAncient = (r.ageDays || 0) > 365;
+    return `
+      <tr>
+        <td>${escapeHtml(ageTxt || 'Unknown')}${isAncient ? ' <span class="badge ancient">Ancient</span>' : ''}</td>
+        <td>${escapeHtml(createdTxt)}</td>
+        <td><span class="ticket-tooltip-placeholder" title="">${escapeHtml(r.ticketId)}</span></td>
+        <td>${escapeHtml(r.deviceCode || '')}</td>
+        <td>${escapeHtml(r.model || '')}</td>
+        <td>${escapeHtml(r.serialNo || '')}</td>
+        <td>${escapeHtml(r.nextETA || '')}</td>
+        <td>${escapeHtml(r.etaStatus || '')}</td>
+        <td>${escapeHtml(r.reviewDate || '')}</td>
+        <td>${escapeHtml(r.customer || '')}</td>
+        <td>${escapeHtml(r.address || '')}</td>
+        <td>${escapeHtml(r.city || '')}</td>
+        <td>${escapeHtml(r.state || '')}</td>
+        <td>${escapeHtml(r.postcode || '')}</td>
+        <td>${escapeHtml(r.createdBy || '')}</td>
+        <td>${escapeHtml(r.assignedTo || '')}</td>
+        <td>${escapeHtml(r.progress || '')}</td>
+        <td>${escapeHtml(r.ticketType || '')}</td>
+        <td>${escapeHtml(r.service || '')}</td>
+        <td>${escapeHtml(r.siteName || '')}</td>
+        <td><select class="bu-input screen-only" data-ticket-id="${escapeHtml(r.ticketId)}"><option value=""></option>${getBusinessUnits().map(bu => `<option value="${escapeHtml(bu)}" ${safeText(r.bu) === safeText(bu) ? 'selected' : ''}>${escapeHtml(bu)}</option>`).join('')}</select>${safeText(r.overwrittenFrom) ? `<span class="overwrite-note screen-only">Overwritten from ${escapeHtml(r.overwrittenFrom)}</span>` : ''}<span class="print-only">${escapeHtml(r.bu || '')}${safeText(r.overwrittenFrom) ? ` - Overwritten from ${escapeHtml(r.overwrittenFrom)}` : ''}</span></td>
+        <td><input class="tag-input screen-only" data-ticket-id="${escapeHtml(r.ticketId)}" value="${escapeHtml(r.manualComment || '')}" placeholder="Add comment" />${safeText(r.autoComment) ? `<span class="overwrite-note screen-only">${escapeHtml(r.autoComment)}</span>` : ''}${safeText(r.overwrittenCommentFrom) ? `<span class="overwrite-note screen-only">Overwritten from ${escapeHtml(r.overwrittenCommentFrom)}</span>` : ''}<span class="print-only">${escapeHtml(r.comment || '')}${safeText(r.autoComment) && norm(r.comment) !== norm(r.autoComment) ? ` - ${escapeHtml(r.autoComment)}` : ''}${safeText(r.overwrittenCommentFrom) ? ` - Overwritten from ${escapeHtml(r.overwrittenCommentFrom)}` : ''}</span></td>
+      </tr>
+    `;
+  }).join('');
+  bindRowInputs();
+  sizeBUInputs();
+}
+function sizeBUInputs() {
+  document.querySelectorAll('.bu-input').forEach(select => { select.style.minWidth = `16ch`; });
+}
+function bindRowInputs() {
+  document.querySelectorAll('.tag-input').forEach(input => input.addEventListener('change', e => {
+    const ticketId = e.target.getAttribute('data-ticket-id');
+    setTag(ticketId, e.target.value.trim());
+    rerenderAll(false);
+  }));
+  document.querySelectorAll('.bu-input').forEach(input => input.addEventListener('change', e => {
+    const ticketId = e.target.getAttribute('data-ticket-id');
+    setBU(ticketId, e.target.value.trim());
+    rerenderAll(false);
+  }));
+}
+function renderAdminPriorityRules() {
+  const rules = getPriorityRules();
+  els.priorityRulesContainer.innerHTML = PRIORITY_FIELD_META.map(field => {
+    const options = getPriorityFieldOptions(field.key);
+    if (!options.length) return '';
+    const selected = new Set((rules[field.key] || []).map(v => safeText(v)));
+    return `
+      <div class="priority-section">
+        <h3>${escapeHtml(field.label)}</h3>
+        <div class="check-list">
+          ${options.map(option => `
+            <label>
+              <input type="checkbox" data-priority-field="${escapeHtml(field.key)}" value="${escapeHtml(option)}" ${selected.has(safeText(option)) ? 'checked' : ''} />
+              <span>${escapeHtml(option)}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+  renderAdminSummary();
+}
+function renderAdminSummary() {
+  const rules = getPriorityRules();
+  const html = PRIORITY_FIELD_META.map(field => {
+    const selected = rules[field.key] || [];
+    if (!selected.length) return '';
+    return `
+      <div style="margin-bottom:10px;">
+        <strong>${escapeHtml(field.label)}</strong>
+        <div style="margin-top:6px;">${selected.map(v => `<span class="badge" style="margin:0 6px 6px 0;">${escapeHtml(v)}</span>`).join('')}</div>
+      </div>
+    `;
+  }).join('');
+  els.selectedPrioritySummary.innerHTML = html || '<span class="small-note">No Priority Ticket rules selected.</span>';
+}
+function updatePriorityRulesFromAdmin() {
+  const next = clonePriorityRules({});
+  els.priorityRulesContainer.querySelectorAll('input[data-priority-field]:checked').forEach(input => {
+    const key = input.getAttribute('data-priority-field');
+    if (!next[key]) next[key] = [];
+    next[key].push(input.value);
+  });
+  progressState.priorityRules = clonePriorityRules(next);
+}
+function updateProgressStatusText(name='not loaded') {
+  const metaCount = Object.keys(progressState.ticketMeta || {}).length;
+  els.progressStatus.textContent = `Progress JSON: ${name} | ${metaCount} tagged/allocated`;
+}
+function rerenderAll(refreshFilters=true) {
+  mergeData();
+  if (refreshFilters) populateFilters();
+  renderAdminPriorityRules();
+  applyFilters();
+  renderWidgets();
+  updateOldestTicketPill();
+  updatePrintSummary();
+  renderCharts();
+  renderTable();
+  updateProgressStatusText(els.progressStatus.dataset.name || 'not loaded');
+}
+
+async function readFileRecords(file) {
+  const name = file.name.toLowerCase();
+  const buf = await file.arrayBuffer();
+  if (name.endsWith('.csv')) {
+    const txt = new TextDecoder().decode(buf);
+    const wb = XLSX.read(txt, { type:'string' });
+    return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval:'' });
+  }
+  const wb = XLSX.read(buf, { type:'array' });
+  return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval:'' });
+}
+async function readJsonFile(file) {
+  const txt = await file.text();
+  return JSON.parse(txt);
+}
+function downloadTextFile(filename, text, mime='application/json') {
+  const blob = new Blob([text], { type:mime });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+}
+function exportProgressJson() {
+  progressState.exportedAt = new Date().toISOString();
+  const filename = `Client_Services_Progress_${new Date().toISOString().slice(0,10)}.json`;
+  downloadTextFile(filename, JSON.stringify(progressState, null, 2));
+}
+function importProgressJson(data, fileName='loaded') {
+  const incomingTicketMeta = data.ticketMeta && typeof data.ticketMeta === 'object' ? data.ticketMeta : {};
+  const mergedTicketMeta = { ...(progressState.ticketMeta || {}) };
+  Object.entries(incomingTicketMeta).forEach(([ticketId, meta]) => {
+    const currentMeta = mergedTicketMeta[ticketId] && typeof mergedTicketMeta[ticketId] === 'object'
+      ? { tag:safeText(mergedTicketMeta[ticketId].tag), bu:safeText(mergedTicketMeta[ticketId].bu) }
+      : { tag:'', bu:'' };
+    const nexusDerived = getNexusDerivedValuesForTicket(ticketId);
+    if (!currentMeta.tag && !safeText(nexusDerived.comment) && safeText(meta?.tag)) currentMeta.tag = safeText(meta.tag);
+    if (!currentMeta.bu && !safeText(nexusDerived.bu) && safeText(meta?.bu)) currentMeta.bu = safeText(meta.bu);
+    if (currentMeta.tag || currentMeta.bu) mergedTicketMeta[ticketId] = currentMeta;
+  });
+
+  progressState = {
+    version: 3.5,
+    exportedAt: data.exportedAt || null,
+    followupStatuses: Array.isArray(data.followupStatuses) && data.followupStatuses.length ? data.followupStatuses : [...DEFAULT_FOLLOWUP_STATUSES],
+    businessUnits: Array.isArray(data.businessUnits) && data.businessUnits.length ? [...new Set([...(progressState.businessUnits || []), ...data.businessUnits])] : [...DEFAULT_BUS],
+    priorityRules: clonePriorityRules(data.priorityRules || DEFAULT_PRIORITY_RULES),
+    ticketMeta: mergedTicketMeta
+  };
+  els.progressStatus.dataset.name = fileName;
+  rerenderAll();
+}
+function formatEmailRows(rows) {
+  return rows.map(r => `- Ticket ${r.ticketId} | ${r.customer} | ${r.progress} | Age: ${r.ageDays ?? 'Unknown'} days | ETA: ${r.nextETA || 'None'} | Comments: ${r.comment || 'None'}`).join('\n');
+}
+function openEmail() {
+  const bu = els.buFilter.value;
+  if (bu === 'all') {
+    alert('Select a Responsible BU from the filter before opening the email.');
+    return;
+  }
+  const rows = filteredRecords.filter(r => norm(r.bu) === norm(bu)).slice(0, 80);
+  if (!rows.length) {
+    alert('No tickets available for the selected Responsible BU.');
+    return;
+  }
+  const subject = `Nexus Update Request - ${bu} - ${new Date().toLocaleDateString('en-AU')}`;
+  const intro = 'Please review the comments on the below, and action accordingly.';
+  const closing = 'Important: You do not need to respond by email for each ticket, just update Nexus.';
+  const bodyText = ['Hi Team,', intro, formatEmailRows(rows), closing, 'Regards,', 'Client Services'].join('\n');
+  window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`;
+}
+function buildMapRecords() {
+  return filteredRecords.map(r => {
+    const location = getEffectiveLocation(r);
+    if (!location) return null;
+    return {
+      ticketId: r.ticketId,
+      customer: r.customer,
+      progress: r.progress,
+      bu: r.bu,
+      location
+    };
+  }).filter(Boolean);
+}
+function openTicketMap() {
+  const rows = buildMapRecords();
+  if (!rows.length) {
+    alert('No mapped ticket locations are available for the current filtered results.');
+    return;
+  }
+  const payload = JSON.stringify(rows).replace(/</g, '\u003c');
+  const win = window.open('', '_blank');
+  if (!win) {
+    alert('Pop-up blocked. Please allow pop-ups for this page.');
+    return;
+  }
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Client Services Ticket Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  html, body { margin:0; height:100%; font-family:Arial, Helvetica, sans-serif; }
+  .wrap { display:grid; grid-template-columns: 360px 1fr; height:100vh; }
+  .side { border-right:1px solid #dbe3ef; padding:12px; overflow:auto; background:#fff; }
+  .side h1 { margin:0 0 8px; font-size:20px; }
+  .side p { margin:0 0 12px; color:#64748b; font-size:13px; }
+  .ticket { border:1px solid #dbe3ef; border-radius:12px; padding:10px; margin-bottom:10px; cursor:pointer; }
+  .ticket:hover { background:#f8fbff; }
+  .ticket strong { display:block; margin-bottom:4px; }
+  .map-wrap { display:grid; grid-template-rows: 280px 1fr; height:100vh; }
+  iframe { width:100%; height:100%; border:0; }
+  #leafletMap { width:100%; height:100%; }
+  .loading { position:absolute; top:12px; left:12px; z-index:1000; background:#fff; border:1px solid #dbe3ef; border-radius:10px; padding:8px 10px; box-shadow:0 10px 28px rgba(15,23,42,.08); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="side">
+    <h1>Ticket map</h1>
+    <p>Google Maps is shown above the pin map. Click a ticket or a marker to update the Google Maps iframe.</p>
+    <div id="ticketList"></div>
+  </div>
+  <div class="map-wrap">
+    <iframe id="gmaps" src="https://maps.google.com/maps?q=Australia&z=4&output=embed"></iframe>
+    <div style="position:relative;">
+      <div class="loading" id="loadingMsg">Loading ticket pins...</div>
+      <div id="leafletMap"></div>
+    </div>
+  </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+<script>
+const tickets = ${payload};
+const map = L.map('leafletMap').setView([-25.2744, 133.7751], 4);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
+const bounds = [];
+const iframe = document.getElementById('gmaps');
+const ticketList = document.getElementById('ticketList');
+function setGoogleMap(location) {
+  iframe.src = 'https://maps.google.com/maps?q=' + encodeURIComponent(location) + '&output=embed';
+}
+ticketList.innerHTML = tickets.map(function(t, i) {
+  return '<div class="ticket" data-index="' + i + '">'
+    + '<strong>Ticket ' + t.ticketId + '</strong>'
+    + '<div>' + t.customer + '</div>'
+    + '<div>' + t.progress + (t.bu ? ' | ' + t.bu : '') + '</div>'
+    + '<div style="margin-top:4px; color:#64748b; font-size:12px;">' + t.location + '</div>'
+    + '</div>';
+}).join('');
+[...ticketList.querySelectorAll('.ticket')].forEach(card => card.addEventListener('click', () => {
+  const idx = Number(card.getAttribute('data-index'));
+  const t = tickets[idx];
+  setGoogleMap(t.location);
+}));
+async function geocode(location) {
+  const url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=au&q=' + encodeURIComponent(location);
+  const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+  const data = await res.json();
+  return data && data[0] ? { lat:Number(data[0].lat), lon:Number(data[0].lon) } : null;
+}
+(async () => {
+  for (const t of tickets) {
+    try {
+      const geo = await geocode(t.location);
+      if (!geo) continue;
+      const marker = L.marker([geo.lat, geo.lon]).addTo(map);
+      marker.bindPopup('<strong>Ticket ' + t.ticketId + '</strong><br>' + t.customer + '<br>' + t.progress + (t.bu ? ' | ' + t.bu : '') + '<br>' + t.location);
+      marker.on('click', () => setGoogleMap(t.location));
+      bounds.push([geo.lat, geo.lon]);
+    } catch (err) {
+      console.error('Geocode failed', t.location, err);
+    }
+  }
+  if (bounds.length) map.fitBounds(bounds, { padding:[30,30] });
+  document.getElementById('loadingMsg').textContent = bounds.length ? 'Pins loaded' : 'No pins could be placed from the available addresses';
+})();
+<\/script>
+</body>
+</html>`;
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+}
+function setAdminState() {
+  els.adminState.textContent = 'Admin mode: available';
+  if (els.adminLogin) els.adminLogin.classList.add('hidden');
+  els.adminControls.classList.remove('hidden');
+  if (els.buListEditor) els.buListEditor.value = getBusinessUnits().join('\n');
+}
+function initEvents() {
+  [els.searchInput, els.customerFilter, els.parentCustomerFilter, els.progressFilter, els.stateFilter, els.serviceFilter, els.ticketTypeFilter, els.assignedToFilter, els.createdByFilter, els.ageFilter, els.etaStatusFilter, els.assigneePresenceFilter, els.reviewPresenceFilter, els.ancientFilter, els.buFilter, els.createdTodayToggle].forEach(el => el.addEventListener('input', () => { applyFilters(); renderWidgets(); updateOldestTicketPill(); updatePrintSummary(); renderCharts(); renderTable(); }));
+  els.clearFiltersBtn.addEventListener('click', () => { els.searchInput.value = ''; [els.customerFilter, els.parentCustomerFilter, els.progressFilter, els.stateFilter, els.serviceFilter, els.ticketTypeFilter, els.assignedToFilter, els.createdByFilter, els.ageFilter, els.etaStatusFilter, els.assigneePresenceFilter, els.reviewPresenceFilter, els.ancientFilter, els.buFilter].forEach(s => s.value = 'all'); if (els.createdTodayToggle) els.createdTodayToggle.checked = false; activeWidgetFilter = ''; applyFilters(); renderWidgets(); updateOldestTicketPill(); updatePrintSummary(); renderCharts(); renderTable(); });
+  els.widgets.addEventListener('click', e => { const card = e.target.closest('[data-widget-filter]'); if (!card) return; const next = card.getAttribute('data-widget-filter') || ''; activeWidgetFilter = activeWidgetFilter === next ? '' : next; applyFilters(); renderWidgets(); updateOldestTicketPill(); updatePrintSummary(); renderCharts(); renderTable(); });
+  els.nexusFile.addEventListener('change', async e => { const file = e.target.files[0]; if (!file) return; primaryRecords = await readFileRecords(file); secondaryRecords = []; els.nexusStatus.textContent = `Nexus data loaded: ${file.name}`; rerenderAll(); });
+  els.progressFile.addEventListener('change', async e => { const file = e.target.files[0]; if (!file) return; try { importProgressJson(await readJsonFile(file), file.name); } catch (err) { alert('Could not read progress JSON.'); console.error(err); } });
+  els.exportProgressBtn.addEventListener('click', exportProgressJson);
+  els.emailBtn.addEventListener('click', openEmail);
+  if (els.includeProjectsToggle) {
+    els.includeProjectsToggle.addEventListener('change', e => {
+      if (e.target.checked) {
+        els.priorityRulesContainer.querySelectorAll('input[data-priority-field]').forEach(input => { input.checked = true; });
+        updatePriorityRulesFromAdmin();
+      } else {
+        progressState.priorityRules = clonePriorityRules(DEFAULT_PRIORITY_RULES);
+        renderAdminPriorityRules();
+      }
+      rerenderAll(false);
+    });
+  }
+  els.printBtn.addEventListener('click', () => { window.print(); });
+  els.openMapBtn.addEventListener('click', openTicketMap);
+  window.addEventListener('beforeprint', prepareForPrint);
+  window.addEventListener('afterprint', cleanupAfterPrint);
+  els.adminBtn.addEventListener('click', () => els.adminPanel.classList.toggle('active'));
+  if (els.loginBtn) els.loginBtn.addEventListener('click', () => {});
+  if (els.lockAdminBtn) els.lockAdminBtn.addEventListener('click', () => { els.adminPanel.classList.remove('active'); });
+  els.priorityRulesContainer.addEventListener('change', () => { updatePriorityRulesFromAdmin(); rerenderAll(false); });
+  els.saveAdminBtn.addEventListener('click', () => { updatePriorityRulesFromAdmin(); const buList = (els.buListEditor.value || '').split(/\r?\n|,/).map(v => v.trim()).filter(Boolean); setBusinessUnits(buList.length ? buList : DEFAULT_BUS); rerenderAll(false); if (els.buListEditor) els.buListEditor.value = getBusinessUnits().join('\n'); alert('Admin settings saved in memory. Export Progress JSON to share them.'); });
+}
+
+function setDynamicPrintChartHeight() {
+  const root = document.documentElement;
+  const grid = document.querySelector('.grid');
+  if (!grid) return;
+
+  const pageHeightPx = Number(getComputedStyle(root).getPropertyValue('--print-page-height-px').trim()) || 1060;
+  const chartsPerRow = Number(getComputedStyle(root).getPropertyValue('--print-charts-per-row').trim()) || 3;
+  const chartGap = Number(getComputedStyle(root).getPropertyValue('--print-chart-gap').trim()) || 6;
+  const chartCount = grid.querySelectorAll('.chart-card').length || 1;
+  const rowCount = Math.max(1, Math.ceil(chartCount / chartsPerRow));
+  const gridTop = grid.getBoundingClientRect().top + window.scrollY;
+  const available = Math.max(320, pageHeightPx - gridTop - 6);
+  const perChart = Math.max(62, Math.min(220, Math.floor((available - ((rowCount - 1) * chartGap)) / rowCount)));
+  root.style.setProperty('--dynamic-print-chart-height', `${perChart}px`);
+}
+
+function prepareForPrint() {}
+function cleanupAfterPrint() {}
+
+function init() {
+  primaryRecords = EMBEDDED_PRIMARY;
+  secondaryRecords = [];
+  els.progressStatus.dataset.name = 'not loaded';
+  initEvents();
+  setAdminState();
+  rerenderAll();
+}
+init();
+</script>
+<datalist id="buOptions"></datalist>
+</body>
+</html>
